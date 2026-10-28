@@ -1,0 +1,1546 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#0F172A" />
+  <title>FreshLabel — 미개봉 선입선출 &amp; 소분 라벨 원터치 관리</title>
+  <link rel="manifest" href="./manifest.json" />
+  <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
+  <link rel="stylesheet" href="./styles.css?v=20261029" />
+</head>
+<body>
+  <div class="app-shell" data-app-mode="SIMPLE">
+    <!-- ====================================================================
+         1. TOP HEADER BAR
+         ==================================================================== -->
+    <header class="top-header">
+      <div class="brand-cluster">
+        <div class="brand-logo" aria-hidden="true">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path>
+            <line x1="7" y1="7" x2="7.01" y2="7"></line>
+          </svg>
+        </div>
+        <div class="brand-title">
+          <span>FreshLabel</span>
+        </div>
+
+        <!-- App Mode Switcher: 라벨 출력 vs 사용 차감 vs 원터치 입고 vs 사용량 통계 vs 상세 관리 -->
+        <div class="app-mode-switcher" role="group" aria-label="화면 모드 선택">
+          <button type="button" class="app-mode-btn active" data-app-mode="SIMPLE" id="btnModeSimple">
+            라벨 출력
+          </button>
+          <button type="button" class="app-mode-btn use-mode-tab" data-app-mode="USE" id="btnModeUse">
+            사용 차감 (-재고)
+          </button>
+          <button type="button" class="app-mode-btn receive-mode-tab" data-app-mode="RECEIVE" id="btnModeReceive">
+            원터치 입고 (+재고)
+          </button>
+          <button type="button" class="app-mode-btn stats-mode-tab" data-app-mode="STATS" id="btnModeStats">
+            사용량 통계
+          </button>
+          <button type="button" class="app-mode-btn" data-app-mode="PRO" id="btnModePro">
+            상세 관리
+          </button>
+        </div>
+      </div>
+
+      <div class="header-controls">
+        <!-- Trial vs 30,000 KRW Full Version Button (Text + Icon on PC, Icon-Only on Mobile) -->
+        <button type="button" class="header-btn license-header-btn" id="btnOpenLicenseModal" title="체험판 / 30,000원 정식판 전환 및 인증코드 입력" aria-label="정식판 인증">
+          <span class="header-btn-icon" id="licenseHeaderIcon">🔒</span>
+          <span id="licenseHeaderBadgeText">체험판</span>
+        </button>
+
+        <!-- Bluetooth Printer Connect Button -->
+        <button type="button" class="header-btn" id="btnConnectPrinter" title="Web Bluetooth 라벨 프린터 연동">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="6.5 6.5 17.5 17.5 12 23 12 1 17.5 6.5 6.5 17.5"></polyline>
+          </svg>
+          <span id="printerStatusLabel">프린터</span>
+        </button>
+
+        <!-- Google Account / Google Sheets Zero-Cost Sync Button -->
+        <button type="button" class="header-btn google-sync-header-btn" id="btnOpenGoogleSyncModal" title="내 구글 스프레드시트 실시간 연동 (다른 핸드폰 확인)">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+            <polyline points="17 8 12 3 7 8"></polyline>
+            <line x1="12" y1="3" x2="12" y2="15"></line>
+          </svg>
+          <span id="googleSyncHeaderLabel">구글 연동</span>
+        </button>
+
+        <!-- Safety Storage Manual Reference Table Button -->
+        <button type="button" class="header-btn" id="btnOpenManualModal" style="border-color: var(--accent-border); background-color: var(--accent-surface); color: var(--accent-text);">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+            <polyline points="14 2 14 8 20 8"></polyline>
+            <line x1="16" y1="13" x2="8" y2="13"></line>
+            <line x1="16" y1="17" x2="8" y2="17"></line>
+          </svg>
+          <span>기준표</span>
+        </button>
+
+        <!-- Owner 1-Time Preset Setting Button -->
+        <button type="button" class="header-btn" id="btnOpenPresetModal">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="3"></circle>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+          </svg>
+          <span>설정</span>
+        </button>
+
+        <!-- Live Clock -->
+        <div class="live-clock tabular-nums" id="liveClockDisplay">2026.10.27 14:30</div>
+      </div>
+    </header>
+
+    <!-- ====================================================================
+         1-A. TOP PINNED CLOSING DISPOSAL & HYGIENE CHECK BAR (헤더 바로 아래 최상단 고정)
+         ==================================================================== -->
+    <section class="bottom-alert-bar" id="bottomAlertBar" aria-label="오늘 마감 폐기 안내 바">
+      <div class="alert-summary-group">
+        <div class="alert-badge-urgent" id="closingStatusBadge" role="button" tabindex="0" title="클릭하여 접기/펼치기">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+            <line x1="12" y1="9" x2="12" y2="13"></line>
+            <line x1="12" y1="17" x2="12.01" y2="17"></line>
+          </svg>
+          <span id="closingAlertTitle">오늘 밤 마감 폐기 대상: 2건 (위생 체크 필요)</span>
+        </div>
+        <div class="alert-items-chips" id="closingAlertChips">
+          <!-- Populated dynamically -->
+        </div>
+      </div>
+
+      <div class="bottom-right-actions">
+        <span class="roi-pill tabular-nums" id="roiPillText">이달 폐기절감·과태료 방어 효과: <strong id="roiSavedAmount">485,000원</strong></span>
+        <button type="button" class="btn-dispose-all" id="btnDisposeAllClosing">일괄 마감 폐기 완료 체크</button>
+        <button type="button" class="btn-toggle-alert-bar" id="btnToggleAlertBar" aria-expanded="true">▲ 접기</button>
+      </div>
+    </section>
+
+    <!-- ====================================================================
+         SIMPLE ONE-TOUCH KIOSK MODE (간편 원터치 모드: 버튼 1번 = 재고차감 + 라벨출력)
+         ==================================================================== -->
+    <section class="simple-mode-workspace" id="simpleModeWorkspace" aria-label="간편 원터치 모드">
+      <!-- Left: Compact 1-Row Filter + One-Touch Buttons -->
+      <div class="simple-kiosk-panel">
+        <div class="simple-kiosk-header">
+          <select class="filter-select" id="simpleCategorySelect" aria-label="간편모드 자재 분류 선택">
+            <option value="ALL">전체 품목 (75종)</option>
+            <option value="FAV">자주 쓰는 자재</option>
+            <option value="물베이스">1. 물 베이스</option>
+            <option value="우유·크림">2. 우유 &amp; 크림</option>
+            <option value="시럽·소스·액상">3. 시럽·소스·액상</option>
+            <option value="파우더·토핑">4. 파우더 &amp; 토핑</option>
+            <option value="펄·과일·커피">5. 펄·과일·커피</option>
+            <option value="베이커리·케익">6. 베이커리 해동</option>
+          </select>
+          <input
+            type="search"
+            class="form-input"
+            id="simpleSearchInput"
+            placeholder="품목 빠른 검색 (예: 우유, 초코, 조리퐁)"
+          />
+          <button type="button" class="btn-fav-split-toggle" id="btnToggleBigFavMode" title="누르면 자주 쓰는 품목만 크게 모아 보거나 전체 목록으로 돌아갑니다">
+            <span id="bigFavModeLabel">★ 자주 쓰는 품목</span>
+          </button>
+          <div class="fav-cols-switcher" id="simpleFavColsSwitcher" role="group" aria-label="버튼 열 개수" style="display: none;">
+            <button type="button" class="fav-col-btn" data-fav-cols="2">2열</button>
+            <button type="button" class="fav-col-btn active" data-fav-cols="3">3열</button>
+            <button type="button" class="fav-col-btn" data-fav-cols="4">4열</button>
+          </div>
+          <button type="button" class="header-btn" id="btnOpenFavSelectModal" style="height: 38px; border-color: #F59E0B; background-color: #FFFBEB; color: #B45309; font-weight: 800;">
+            <span>★ 품목 선택</span>
+          </button>
+        </div>
+
+        <div class="simple-kiosk-scroll-body" id="simpleKioskScrollBody">
+          <!-- Favorite Product Buttons (Only shown when btnToggleBigFavMode is pressed) -->
+          <div class="fav-giant-split-zone" id="favGiantSplitZone">
+            <div class="fav-giant-grid" id="favGiantGrid" data-cols="3">
+              <!-- Populated dynamically by app.js -->
+            </div>
+          </div>
+
+          <!-- Normal Full Item List (Shown by default when Giant Split Mode is off) -->
+          <div class="all-items-split-zone" id="allItemsSplitZone">
+            <div class="simple-kiosk-grid" id="simpleKioskGrid">
+              <!-- Populated dynamically by app.js -->
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right: Single Unified Sticker + Live Status Card -->
+      <aside class="simple-result-dock">
+        <div class="simple-sticker-card">
+          <div class="simple-inline-status" id="simpleStockFeedbackBox">
+            <span class="simple-feedback-badge" id="simpleFeedbackTitle">품목 버튼을 누르면 즉시 출력됩니다</span>
+            <span class="simple-feedback-desc tabular-nums" id="simpleFeedbackSub">우유 1L · 재고 21팩</span>
+          </div>
+
+          <div class="thermal-label-paper" id="simpleStickerPaper" data-paper-size="58x40">
+            <div class="sticker-top-bar">
+              <span class="sticker-law-tag" id="simpleStickerAction">[개봉]</span>
+              <span class="sticker-storage-badge" id="simpleStickerStorage">냉장</span>
+            </div>
+            <div class="sticker-rows">
+              <div class="sticker-row">
+                <span class="sticker-key">[ 자 재 명 ]</span>
+                <span class="sticker-val" id="simpleStickerName">우유 1L (개봉)</span>
+              </div>
+              <div class="sticker-row">
+                <span class="sticker-key">[ 시작일시 ]</span>
+                <span class="sticker-val tabular-nums" id="simpleStickerOpened">2026.10.27 14:30:00</span>
+              </div>
+              <div class="sticker-row">
+                <span class="sticker-key">[ 소비기한 ]</span>
+                <span class="sticker-val highlight-expiry tabular-nums" id="simpleStickerExpires">2026.10.29</span>
+              </div>
+              <div class="sticker-row" id="simpleStickerOrigRow">
+                <span class="sticker-key">[ 유통기한 ]</span>
+                <span class="sticker-val tabular-nums" id="simpleStickerOriginalExpiry">2026.11.01</span>
+              </div>
+              <div class="sticker-row" id="simpleStickerManagerRow">
+                <span class="sticker-key">[ 담 당 자 ]</span>
+                <span class="sticker-val" id="simpleStickerManager">매장관리자</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Compact Label Customizer Bar (규격 · 담당자 · 글씨크기 · 항목 미세조정) -->
+          <div class="label-customizer-bar" aria-label="라벨 디자인 및 인쇄 규격 빠른 설정">
+            <div class="label-customizer-row">
+              <label class="label-custom-field">
+                <span>담당자</span>
+                <input type="text" id="labelManagerNameInput" value="매장관리자" placeholder="예: 점장, 김매니저" maxlength="14" />
+              </label>
+              <label class="label-custom-field">
+                <span>라벨규격</span>
+                <select id="quickPaperSizeSelect">
+                  <option value="58x40">58×40mm (표준)</option>
+                  <option value="50x30">50×30mm (중형)</option>
+                  <option value="40x30">40×30mm (소형)</option>
+                </select>
+              </label>
+            </div>
+            <div class="label-customizer-toggles">
+              <label class="label-toggle-chip">
+                <input type="checkbox" id="chkLargeLabelFont" />
+                <span>큰 글씨</span>
+              </label>
+              <label class="label-toggle-chip">
+                <input type="checkbox" id="chkShowOrigExpiry" checked />
+                <span>유통기한 표시</span>
+              </label>
+              <label class="label-toggle-chip">
+                <input type="checkbox" id="chkShowManager" checked />
+                <span>담당자 표시</span>
+              </label>
+            </div>
+          </div>
+
+          <div class="dispenser-actions" style="margin-top: 8px;">
+            <button type="button" class="btn-dispenser primary-print" id="btnSimpleReprint">
+              <span>라벨 재출력</span>
+            </button>
+            <button type="button" class="btn-dispenser" id="btnSimpleSystemPrint">
+              <span>프린터 인쇄</span>
+            </button>
+          </div>
+        </div>
+      </aside>
+    </section>
+
+    <!-- ====================================================================
+         1-B-1. DEDICATED ONE-TOUCH STOCK USAGE / DEDUCTION SCREEN (사용 차감 전용 화면)
+         ==================================================================== -->
+    <section class="use-mode-workspace" id="useModeWorkspace" aria-label="원터치 사용 차감 전용 화면">
+      <div class="simple-kiosk-panel">
+        <div class="simple-kiosk-header" style="background-color: #FFFBEB; border-bottom-color: #FDE68A;">
+          <select class="filter-select" id="useCategorySelect" aria-label="사용 화면 자재 분류 선택">
+            <option value="ALL">전체 품목 (75종)</option>
+            <option value="FAV">자주 쓰는 자재</option>
+          </select>
+          <input
+            type="search"
+            class="form-input"
+            id="useSearchInput"
+            placeholder="사용(차감)할 품목 검색 (예: 우유, 초코)"
+          />
+          <button type="button" class="btn-fav-split-toggle" id="btnToggleUseBigFavMode" style="border-color: #D97706; background-color: #FEF3C7; color: #92400E;">
+            <span id="useBigFavModeLabel">★ 자주 쓰는 품목</span>
+          </button>
+          <div class="fav-cols-switcher" id="useFavColsSwitcher" role="group" aria-label="버튼 열 개수" style="display: none;">
+            <button type="button" class="fav-col-btn" data-fav-cols="2">2열</button>
+            <button type="button" class="fav-col-btn active" data-fav-cols="3">3열</button>
+            <button type="button" class="fav-col-btn" data-fav-cols="4">4열</button>
+          </div>
+          <button type="button" class="header-btn" id="btnOpenFavSelectFromUse" style="height: 38px; border-color: #F59E0B; background-color: #FFFFFF; color: #B45309; font-weight: 800;">
+            <span>★ 품목 선택</span>
+          </button>
+        </div>
+
+        <div class="simple-kiosk-scroll-body" id="useKioskScrollBody">
+          <!-- Favorite Usage Buttons (Shown ONLY when btnToggleUseBigFavMode is pressed) -->
+          <div class="fav-giant-split-zone" id="useFavGiantSplitZone" style="background: linear-gradient(180deg, #FFFBEB 0%, #F8FAFC 100%);">
+            <div class="fav-giant-grid" id="useFavGiantGrid" data-cols="3">
+              <!-- Populated dynamically by app.js -->
+            </div>
+          </div>
+
+          <!-- Normal Full Item Usage Grid -->
+          <div class="all-items-split-zone" id="useAllItemsSplitZone">
+            <div class="simple-kiosk-grid" id="useKioskGrid">
+              <!-- Populated dynamically by app.js -->
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bottom: Recent Usage Deduction History (하단 배치) -->
+      <aside class="simple-result-dock receive-bottom-dock">
+        <div class="active-timers-box" style="flex: 1; min-height: 96px; max-height: 155px;">
+          <div class="active-timers-header" style="flex-wrap: wrap; gap: 8px;">
+            <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+              <span>최근 사용(재고차감) 내역</span>
+              <span class="receive-feedback-badge" id="useFeedbackTitle" style="font-size: 0.75rem; font-weight: 700; color: #B45309;">위 큰 품목 버튼을 터치하면 라벨 출력 없이 1개씩 즉시 재고가 차감됩니다</span>
+            </div>
+            <span class="tabular-nums" id="useHistoryCountBadge" style="color: #D97706; font-weight: 800;">0건</span>
+          </div>
+          <div class="active-timers-list" id="useHistoryList">
+            <!-- Populated dynamically by app.js -->
+          </div>
+        </div>
+      </aside>
+    </section>
+
+    <!-- ====================================================================
+         1-B. DEDICATED ONE-TOUCH STOCK RECEIVING SCREEN (원터치 입고 전용 화면)
+         ==================================================================== -->
+    <section class="receive-mode-workspace" id="receiveModeWorkspace" aria-label="원터치 입고 전용 화면">
+      <!-- Left: Dedicated Stock Receiving Button Grid -->
+      <div class="simple-kiosk-panel">
+        <div class="simple-kiosk-header" style="background-color: #F0F9FF; border-bottom-color: #BAE6FD;">
+          <select class="filter-select" id="receiveCategorySelect" aria-label="입고 화면 자재 분류 선택">
+            <option value="ALL">전체 품목 (75종)</option>
+            <option value="FAV">자주 쓰는 자재</option>
+            <option value="물베이스">1. 물 베이스</option>
+            <option value="우유·크림">2. 우유 &amp; 크림</option>
+            <option value="시럽·소스·액상">3. 시럽·소스·액상</option>
+            <option value="파우더·토핑">4. 파우더 &amp; 토핑</option>
+            <option value="펄·과일·커피">5. 펄·과일·커피</option>
+            <option value="베이커리·케익">6. 베이커리 해동</option>
+          </select>
+          <input
+            type="search"
+            class="form-input"
+            id="receiveSearchInput"
+            placeholder="입고할 품목 검색 (예: 우유, 초코)"
+          />
+          <div style="display: inline-flex; align-items: center; gap: 6px; background: #FFFFFF; border: 1px solid #BAE6FD; padding: 0 10px; height: 38px; border-radius: 8px;">
+            <label for="receiveCustomExpiryDate" style="font-size: 0.75rem; font-weight: 700; color: #0369A1; white-space: nowrap;">유통기한</label>
+            <input
+              type="date"
+              id="receiveCustomExpiryDate"
+              class="tabular-nums"
+              style="border: none; background: transparent; font-family: inherit; font-size: 0.8125rem; font-weight: 700; color: var(--text-primary); outline: none;"
+              title="비워두면 품목별 기본 기한으로 자동 입고됩니다"
+            />
+          </div>
+          <button type="button" class="btn-add-stock" id="btnReceiveScanAutoSave" style="background-color: #0284C7; border-color: #0284C7; height: 38px;">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
+              <circle cx="12" cy="13" r="4"></circle>
+            </svg>
+            <span>스캔 자동입고</span>
+          </button>
+        </div>
+
+        <!-- Dedicated Stock Receiving Kiosk Grid -->
+        <div class="simple-kiosk-grid" id="receiveKioskGrid">
+          <!-- Populated dynamically by app.js -->
+        </div>
+      </div>
+
+      <!-- Bottom: Live Receiving Status + Recent Receiving History (하단 배치) -->
+      <aside class="simple-result-dock receive-bottom-dock">
+        <div class="active-timers-box" style="flex: 1; min-height: 120px; max-height: 210px;">
+          <div class="active-timers-header" style="flex-wrap: wrap; gap: 8px;">
+            <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+              <span>최근 입고 내역</span>
+              <span class="receive-feedback-badge" id="receiveFeedbackTitle" style="font-size: 0.75rem; font-weight: 700; color: #0284C7;">입고 버튼을 누르면 즉시 재고에 추가됩니다</span>
+              <span id="receiveFeedbackSub" style="display: none;"></span>
+            </div>
+            <span class="tabular-nums" id="receiveHistoryCountBadge" style="color: #0284C7; font-weight: 800;">0건</span>
+          </div>
+          <div class="active-timers-list" id="receiveHistoryList">
+            <!-- Populated dynamically by app.js -->
+          </div>
+        </div>
+      </aside>
+    </section>
+
+    <!-- ====================================================================
+         1-D. CONSUMPTION & USAGE STATISTICS DASHBOARD (일별·주별·월별 소비량 그래프 통계)
+         ==================================================================== -->
+    <section class="stats-mode-workspace" id="statsModeWorkspace" aria-label="일별·주별·월별 소비량 통계">
+      <div class="stats-dashboard-panel">
+        <!-- Top Control Bar: Period Tabs (일별 / 주별 / 월별) + Category & Item Filters -->
+        <div class="stats-toolbar">
+          <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 10px;">
+            <span style="font-size: 1rem; font-weight: 900; color: var(--text-primary); display: inline-flex; align-items: center; gap: 6px;">
+              📊 소비량·사용량 통계
+            </span>
+
+            <div class="stats-period-switcher" role="group" aria-label="통계 기간 선택">
+              <button type="button" class="stats-period-btn active" data-stats-period="DAILY">
+                일별 (최근 7일)
+              </button>
+              <button type="button" class="stats-period-btn" data-stats-period="WEEKLY">
+                주별 (최근 8주)
+              </button>
+              <button type="button" class="stats-period-btn" data-stats-period="MONTHLY">
+                월별 (최근 6개월)
+              </button>
+            </div>
+          </div>
+
+          <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 8px;">
+            <select class="filter-select" id="statsCategorySelect" aria-label="통계 분류 선택" style="min-width: 145px; height: 38px;">
+              <option value="ALL">전체 분류</option>
+            </select>
+
+            <select class="filter-select" id="statsItemSelect" aria-label="통계 품목 선택" style="min-width: 195px; height: 38px;">
+              <option value="ALL">전체 자재 합산 보기</option>
+            </select>
+
+            <label style="display: inline-flex; align-items: center; gap: 6px; padding: 0 10px; height: 38px; border-radius: 8px; border: 1px solid var(--border-strong); background: #FFFFFF; font-size: 0.78125rem; font-weight: 800; color: var(--text-secondary); cursor: pointer;">
+              <input type="checkbox" id="chkStatsSampleData" checked style="width: 15px; height: 15px; accent-color: var(--accent-primary);" />
+              <span>예시 추이 포함</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- 4 Summary KPI Cards -->
+        <div class="stats-kpi-grid">
+          <div class="stats-kpi-card">
+            <div class="stats-kpi-label">오늘 소비량 (일별)</div>
+            <div class="stats-kpi-value tabular-nums" id="statsKpiTodayVal">0개</div>
+            <div class="stats-kpi-sub tabular-nums" id="statsKpiTodaySub">어제 대비 -</div>
+          </div>
+
+          <div class="stats-kpi-card">
+            <div class="stats-kpi-label">이번 주 소비량 (주별)</div>
+            <div class="stats-kpi-value tabular-nums" id="statsKpiWeekVal">0개</div>
+            <div class="stats-kpi-sub tabular-nums" id="statsKpiWeekSub">지난주 대비 -</div>
+          </div>
+
+          <div class="stats-kpi-card">
+            <div class="stats-kpi-label">이번 달 소비량 (월별)</div>
+            <div class="stats-kpi-value tabular-nums" id="statsKpiMonthVal">0개</div>
+            <div class="stats-kpi-sub tabular-nums" id="statsKpiMonthSub">전월 대비 -</div>
+          </div>
+
+          <div class="stats-kpi-card highlight">
+            <div class="stats-kpi-label">기간 내 최다 소비 품목</div>
+            <div class="stats-kpi-value" id="statsKpiTopItemVal">-</div>
+            <div class="stats-kpi-sub tabular-nums" id="statsKpiTopItemSub">가장 많이 소진된 핵심 자재</div>
+          </div>
+        </div>
+
+        <!-- Main Dual Charts Grid: Left = Vertical Bar Trend Chart / Right = Top Items Horizontal Bar Ranking -->
+        <div class="stats-charts-grid">
+          <!-- Left: Period Consumption Trend Vertical Bar Chart -->
+          <div class="stats-chart-box">
+            <div class="stats-chart-header">
+              <div>
+                <h3 class="stats-chart-title" id="statsTrendChartTitle">일별 소비량 추이 그래프 (최근 7일)</h3>
+                <p class="stats-chart-subtitle" id="statsTrendChartSubtitle">[사용 차감 (-1)]을 누를 때마다 실시간으로 그래프에 반영됩니다</p>
+              </div>
+              <span class="stats-unit-pill tabular-nums" id="statsTrendTotalBadge">기간 합계: 0</span>
+            </div>
+
+            <div class="stats-bar-chart-wrap" id="statsBarChartContainer">
+              <!-- Populated dynamically by app.js -->
+            </div>
+          </div>
+
+          <!-- Right: Top Consumed Items Horizontal Bar Chart -->
+          <div class="stats-chart-box">
+            <div class="stats-chart-header">
+              <div>
+                <h3 class="stats-chart-title" id="statsRankChartTitle">품목별 소비량 순위 TOP 10</h3>
+                <p class="stats-chart-subtitle" id="statsRankChartSubtitle">막대를 클릭하면 해당 품목의 일별·주별·월별 단독 그래프를 봅니다</p>
+              </div>
+              <button type="button" class="header-btn" id="btnStatsResetItemFilter" style="height: 30px; padding: 0 10px; font-size: 0.75rem; display: none;">
+                전체 품목 보기
+              </button>
+            </div>
+
+            <div class="stats-ranking-list" id="statsRankingList">
+              <!-- Populated dynamically by app.js -->
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ====================================================================
+         2. MAIN DUAL SPLIT WORKSPACE (상세 관리 모드)
+         ==================================================================== -->
+    <main class="dual-workspace" id="mainDualWorkspace" data-active-mobile-tab="stock">
+      <!-- LEFT PANE: Unopened Inventory & FIFO Expiry Management -->
+      <section class="pane" id="paneUnopenedStock" aria-labelledby="leftPaneHeading">
+        <div class="pane-header">
+          <div class="pane-title-group">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0F172A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+              <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+              <line x1="12" y1="22.08" x2="12" y2="12"></line>
+            </svg>
+            <div>
+              <h2 class="pane-title" id="leftPaneHeading">미개봉 재고 &amp; 소비기한 (선입선출 FIFO)</h2>
+              <p class="pane-subtitle">품목 사진을 눌러 크게 보거나 [-1팩 개봉]을 눌러 우측 라벨을 즉시 출력하세요</p>
+            </div>
+          </div>
+          <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 8px;">
+            <button type="button" class="btn-slip-archive" id="btnOpenSlipModal">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                <polyline points="14 2 14 8 20 8"></polyline>
+                <line x1="16" y1="13" x2="8" y2="13"></line>
+                <line x1="16" y1="17" x2="8" y2="17"></line>
+              </svg>
+              <span>입고리스트 사진·보관함</span>
+              <span class="slip-count-pill tabular-nums" id="slipArchiveCountBadge">2</span>
+            </button>
+            <button type="button" class="btn-add-stock" id="btnOpenReceiveModal">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
+                <circle cx="12" cy="13" r="4"></circle>
+              </svg>
+              <span>사진·단건 입고 등록</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Compact 1-Row Dropdown Filter Bar (View Mode / Remaining Days / Zone) -->
+        <div class="zone-filter-bar dropdown-filter-bar">
+          <div class="filter-dropdown-group">
+            <label class="filter-dropdown-label" for="viewModeSelect">보기 방식</label>
+            <select class="filter-select" id="viewModeSelect" aria-label="재고 정렬 및 표시 방식">
+              <option value="BY_DAYS">남은 날짜별 보기 (D-Day 임박순)</option>
+              <option value="BY_PRODUCT">품목별 묶음 보기 (선입선출)</option>
+            </select>
+          </div>
+
+          <div class="filter-dropdown-group">
+            <label class="filter-dropdown-label" for="ddayFilterSelect">남은 날짜</label>
+            <select class="filter-select" id="ddayFilterSelect" aria-label="남은 날짜 구간 필터">
+              <option value="ALL" id="optFilterAll">전체 날짜 (7건)</option>
+              <option value="DANGER" id="optFilterDanger">위험 · D-3 이내 (2건)</option>
+              <option value="WARNING" id="optFilterWarning">주의 · D-4 ~ D-7 (1건)</option>
+              <option value="SAFE" id="optFilterSafe">여유 · D-8 이상 (4건)</option>
+            </select>
+          </div>
+
+          <div class="filter-dropdown-group">
+            <label class="filter-dropdown-label" for="zoneFilterSelect">보관 구역</label>
+            <select class="filter-select" id="zoneFilterSelect" aria-label="매장 보관 구역 필터">
+              <option value="ALL">전체 구역</option>
+              <option value="우유·유제품 냉장">우유·유제품 냉장</option>
+              <option value="시럽·소스·베이스 냉장">시럽·소스·베이스 냉장</option>
+              <option value="베이커리·과일 쇼케이스">베이커리·과일 쇼케이스</option>
+              <option value="커피바·파우더·실온">커피바·파우더·실온</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- FIFO Grouped Lot List -->
+        <div class="fifo-list" id="fifoInventoryList">
+          <!-- Populated dynamically by app.js -->
+        </div>
+      </section>
+
+      <!-- RIGHT PANE: One-Touch Subdivided Label Printer & Active Timers -->
+      <section class="pane" id="paneRightWorkspace" aria-labelledby="rightPaneHeading">
+        <div class="pane-header" id="rightPaneHeaderBar">
+          <div class="pane-title-group">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0F172A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="6 9 6 2 18 2 18 9"></polyline>
+              <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
+              <rect x="6" y="14" width="12" height="8"></rect>
+            </svg>
+            <div>
+              <h2 class="pane-title" id="rightPaneHeading">개봉·소분·제조·해동 라벨 원터치 출력</h2>
+              <p class="pane-subtitle">모든 날짜는 [당일 포함] 기준으로 자동 계산됩니다 (예: 안전보관 3일 = 오늘 포함 3일째까지)</p>
+            </div>
+          </div>
+          <span class="compliance-pill">당일포함 자동계산</span>
+        </div>
+
+        <!-- Preset Category Dropdown & Quick Search Bar -->
+        <div class="zone-filter-bar preset-filter-bar">
+          <div class="filter-dropdown-group" style="flex: 1.2;">
+            <label class="filter-dropdown-label" for="presetCategorySelect">자재 분류</label>
+            <select class="filter-select" id="presetCategorySelect" aria-label="소분 라벨 자재 분류 선택">
+              <option value="FAV">자주 쓰는 핵심 자재 (추천)</option>
+              <option value="ALL">전체 자재 보기 (매뉴얼 전품목)</option>
+              <option value="물베이스">1. 물 베이스 (설탕·초코·복숭아·녹차 등 5일)</option>
+              <option value="우유·크림">2. 우유베이스 &amp; 크림 (우유·휘핑·쿠키 등 3~5일)</option>
+              <option value="시럽·소스·액상">3. 시럽·소스·액상 (블루베리·파인애플·연유 등)</option>
+              <option value="파우더·토핑">4. 파우더 &amp; 토핑 (파우더류·초코칩·나타드코코 등)</option>
+              <option value="펄·과일·커피">5. 타피오카펄·과일·커피 (삶은펄 4H·딸기·원두 등)</option>
+              <option value="베이커리·케익">6. 베이커리 &amp; 케익 해동 (24H / 48H)</option>
+            </select>
+          </div>
+          <div class="filter-dropdown-group" style="flex: 0.8;">
+            <input
+              type="search"
+              class="form-input"
+              id="presetSearchInput"
+              placeholder="품목명 검색 (예: 블루베리, 펄, 케익)"
+              style="height: 38px; width: 100%; font-size: 0.8125rem;"
+            />
+          </div>
+        </div>
+
+        <div class="right-pane-content">
+          <!-- One-Touch Preset Grid -->
+          <div class="preset-grid" id="presetGrid">
+            <!-- Populated dynamically by app.js -->
+          </div>
+
+          <!-- Lower Split: Thermal Sticker Dispenser Preview + Active Opened Timers -->
+          <div class="lower-right-split">
+            <!-- Left: Thermal Sticker Output Dispenser -->
+            <div class="label-dispenser-box" id="sectionLabelDispenser">
+              <div>
+                <div class="dispenser-header">
+                  <span>방수 감열 라벨 출력창 (50×30mm)</span>
+                  <span id="lastPrintBadge">방금 발행됨</span>
+                </div>
+                <div class="dispenser-slot"></div>
+
+                <!-- Printable Thermal Sticker -->
+                <div class="thermal-label-paper" id="printableLabelArea" data-paper-size="58x40">
+                  <div class="sticker-top-bar">
+                    <span class="sticker-law-tag" id="stickerActionType">[개봉]</span>
+                    <span class="sticker-storage-badge" id="stickerStorage">냉장</span>
+                  </div>
+                  <div class="sticker-rows">
+                    <div class="sticker-row">
+                      <span class="sticker-key">[ 자 재 명 ]</span>
+                      <span class="sticker-val" id="stickerItemName">우유 1L (개봉)</span>
+                    </div>
+                    <div class="sticker-row">
+                      <span class="sticker-key">[ 시작일시 ]</span>
+                      <span class="sticker-val tabular-nums" id="stickerOpenedAt">2026.10.27 14:30:00</span>
+                    </div>
+                    <div class="sticker-row">
+                      <span class="sticker-key">[ 소비기한 ]</span>
+                      <span class="sticker-val highlight-expiry tabular-nums" id="stickerExpiresAt">2026.10.29</span>
+                    </div>
+                    <div class="sticker-row" id="stickerOrigRow">
+                      <span class="sticker-key">[ 유통기한 ]</span>
+                      <span class="sticker-val tabular-nums" id="stickerOriginalExpiry">2026.11.01</span>
+                    </div>
+                    <div class="sticker-row" id="stickerManagerRow">
+                      <span class="sticker-key">[ 담 당 자 ]</span>
+                      <span class="sticker-val" id="stickerManager">매장관리자</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="dispenser-actions">
+                <button type="button" class="btn-dispenser primary-print" id="btnReprintCurrent">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="6 9 6 2 18 2 18 9"></polyline>
+                    <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
+                    <rect x="6" y="14" width="12" height="8"></rect>
+                  </svg>
+                  <span>라벨 재출력</span>
+                </button>
+                <button type="button" class="btn-dispenser" id="btnSystemPrint">
+                  <span>실제 프린터 인쇄</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Right: Active Subdivided/Opened Containers in Fridge -->
+            <div class="active-timers-box" id="sectionActiveTimers">
+              <div class="active-timers-header">
+                <span>현재 개봉·소분 사용 중 용기 타이머</span>
+                <span class="tabular-nums" id="activeTimerCountBadge">4건 관리 중</span>
+              </div>
+              <div class="active-timers-list" id="activeTimersList">
+                <!-- Populated dynamically by app.js -->
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- ====================================================================
+         4. MOBILE FIXED BOTTOM NAVIGATION BAR (핸드폰 전용 하단 네비게이션 바)
+         ==================================================================== -->
+    <nav class="mobile-bottom-nav" id="mobileBottomNav" aria-label="모바일 하단 네비게이션">
+      <button type="button" class="mobile-nav-item active" data-mobile-tab="simple">
+        <div class="mobile-nav-icon-wrap">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="6 9 6 2 18 2 18 9"></polyline>
+            <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
+            <rect x="6" y="14" width="12" height="8"></rect>
+          </svg>
+        </div>
+        <span class="mobile-nav-label">라벨 출력</span>
+      </button>
+
+      <button type="button" class="mobile-nav-item" data-mobile-tab="use">
+        <div class="mobile-nav-icon-wrap">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+          </svg>
+        </div>
+        <span class="mobile-nav-label">사용 차감</span>
+      </button>
+
+      <button type="button" class="mobile-nav-item" data-mobile-tab="receive">
+        <div class="mobile-nav-icon-wrap">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="12" y1="5" x2="12" y2="19"></line>
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+          </svg>
+        </div>
+        <span class="mobile-nav-label">원터치 입고</span>
+      </button>
+
+      <button type="button" class="mobile-nav-item" data-mobile-tab="stats">
+        <div class="mobile-nav-icon-wrap">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="20" x2="18" y2="10"></line>
+            <line x1="12" y1="20" x2="12" y2="4"></line>
+            <line x1="6" y1="20" x2="6" y2="14"></line>
+          </svg>
+        </div>
+        <span class="mobile-nav-label">사용량 통계</span>
+      </button>
+
+      <button type="button" class="mobile-nav-item" data-mobile-tab="stock">
+        <div class="mobile-nav-icon-wrap">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+            <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+            <line x1="12" y1="22.08" x2="12" y2="12"></line>
+          </svg>
+          <span class="mobile-nav-badge tabular-nums" id="navBadgeStock">7</span>
+        </div>
+        <span class="mobile-nav-label">상세·재고</span>
+      </button>
+    </nav>
+  </div>
+
+  <!-- ====================================================================
+       MODAL 1: New Unopened Pack / Box Receiving (+ Product Photo & OCR)
+       ==================================================================== -->
+  <dialog class="modal-dialog" id="stockReceiveDialog">
+    <div class="modal-header">
+      <h3 class="modal-title">유통기한 스캔 (자동저장) · 미개봉 입고 등록</h3>
+      <button type="button" class="modal-close-btn" id="btnCloseReceiveModal" aria-label="닫기">&times;</button>
+    </div>
+    <form id="stockReceiveForm">
+      <div class="modal-body">
+        <!-- Product Photo Capture / Upload Section -->
+        <div class="photo-capture-box">
+          <div class="photo-capture-top">
+            <span class="form-label" style="color: var(--text-primary);">유통기한·물건 스캔 (촬영/스캔 즉시 재고에 자동 저장됩니다)</span>
+            <div class="photo-capture-actions">
+              <button type="button" class="btn-mini-action" id="btnStartItemCamera">카메라 켜기</button>
+              <label class="btn-mini-action" style="display: inline-flex; align-items: center; cursor: pointer;">
+                <span>사진 스캔 (자동저장)</span>
+                <input type="file" id="itemPhotoFileInput" accept="image/*" capture="environment" style="display: none;" />
+              </label>
+              <button type="button" class="btn-mini-action" id="btnSimulateBarcodeScan" style="border-color: var(--accent-primary); color: var(--accent-text); background-color: var(--accent-surface);">
+                원터치 유통기한 스캔 (즉시 자동저장)
+              </button>
+            </div>
+          </div>
+
+          <div class="photo-preview-stage" id="itemPhotoStage">
+            <span id="itemPhotoPlaceholderText">카메라로 찍거나 [원터치 유통기한 스캔 (즉시 자동저장)]을 누르면 유통기한이 자동 인식되어 바로 저장됩니다</span>
+            <video id="itemCameraVideo" autoplay playsinline muted style="display: none;"></video>
+            <img id="itemPhotoPreviewImg" alt="촬영된 물건 사진" style="display: none;" />
+            <div class="camera-shutter-overlay" id="itemCameraShutterBar" style="display: none;">
+              <button type="button" class="btn-shutter" id="btnCaptureItemFrame">찰칵! 스캔 &amp; 즉시 자동저장</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <label class="form-label" for="receiveProductName">품목명 (미개봉 완제품)</label>
+          <input type="text" class="form-input" id="receiveProductName" placeholder="예: 매일우유 1L" required />
+        </div>
+
+        <div class="form-row-grid">
+          <div class="form-row">
+            <label class="form-label" for="receiveZone">매장 보관 구역 (Zone)</label>
+            <select class="form-select" id="receiveZone">
+              <option value="우유·유제품 냉장">우유·유제품 냉장</option>
+              <option value="토핑·청 쇼케이스">토핑·청 쇼케이스</option>
+              <option value="커피바·상온 선반">커피바·상온 선반</option>
+            </select>
+          </div>
+          <div class="form-row">
+            <label class="form-label" for="receiveLinkedPreset">연동할 개봉·소분 라벨 프리셋</label>
+            <select class="form-select" id="receiveLinkedPreset">
+              <!-- Populated dynamically -->
+            </select>
+          </div>
+        </div>
+
+        <div class="form-row-grid">
+          <div class="form-row">
+            <label class="form-label" for="receiveExpiryDate">포장지 소비기한 (로트 만료일)</label>
+            <input type="date" class="form-input tabular-nums" id="receiveExpiryDate" required />
+          </div>
+          <div class="form-row">
+            <label class="form-label" for="receiveQty">입고 수량 (팩/봉/통)</label>
+            <input type="number" class="form-input tabular-nums" id="receiveQty" min="1" max="500" value="10" required />
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="header-btn" id="btnCancelReceiveModal">취소</button>
+        <button type="submit" class="btn-add-stock">사진과 함께 입고 등록</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- ====================================================================
+       MODAL 4: Delivery Slip / Receiving List Photo Capture & Archive
+       ==================================================================== -->
+  <dialog class="modal-dialog modal-wide" id="deliverySlipDialog">
+    <div class="modal-header">
+      <h3 class="modal-title">입고리스트(거래명세서·납품전표) 사진 촬영 &amp; 보관함</h3>
+      <button type="button" class="modal-close-btn" id="btnCloseSlipModal" aria-label="닫기">&times;</button>
+    </div>
+
+    <div class="modal-tabs">
+      <button type="button" class="modal-tab-btn active" data-slip-tab="capture" id="tabBtnSlipCapture">
+        새 입고리스트 사진 찍기 &amp; 일괄 입고
+      </button>
+      <button type="button" class="modal-tab-btn" data-slip-tab="archive" id="tabBtnSlipArchive">
+        저장된 입고리스트 사진 보관함 (<span id="tabSlipArchiveCount">2</span>건)
+      </button>
+    </div>
+
+    <!-- TAB 1: Capture New Delivery Slip & Bulk Import -->
+    <div class="modal-body" id="slipTabCapturePanel">
+      <div class="slip-split-grid">
+        <!-- Left: Camera / Photo of the Paper Delivery List -->
+        <div class="photo-capture-box">
+          <div class="photo-capture-top">
+            <span class="form-label" style="color: var(--text-primary);">1. 거래명세서·입고리스트 촬영</span>
+            <div class="photo-capture-actions">
+              <button type="button" class="btn-mini-action" id="btnStartSlipCamera">카메라 켜기</button>
+              <label class="btn-mini-action" style="display: inline-flex; align-items: center; cursor: pointer;">
+                <span>사진 파일 선택</span>
+                <input type="file" id="slipPhotoFileInput" accept="image/*" capture="environment" style="display: none;" />
+              </label>
+              <button type="button" class="btn-mini-action" id="btnSimulateSlipScan" style="border-color: var(--accent-primary); color: var(--accent-text); background-color: var(--accent-surface);">
+                샘플 명세서 촬영 + 품목인식
+              </button>
+            </div>
+          </div>
+
+          <div class="photo-preview-stage" style="height: 230px;" id="slipPhotoStage">
+            <span id="slipPhotoPlaceholderText" style="padding: 0 14px; text-align: center;">
+              납품받은 종이 입고리스트(거래명세서)를 촬영하면 사진이 보관되고 우측에 품목이 자동 정리됩니다
+            </span>
+            <video id="slipCameraVideo" autoplay playsinline muted style="display: none;"></video>
+            <img id="slipPhotoPreviewImg" alt="촬영된 입고리스트 사진" style="display: none;" />
+            <div class="camera-shutter-overlay" id="slipCameraShutterBar" style="display: none;">
+              <button type="button" class="btn-shutter" id="btnCaptureSlipFrame">찰칵! 명세서 찍기</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right: Extracted / Editable Delivery List Items -->
+        <div style="display: flex; flex-direction: column; gap: 10px;">
+          <div class="form-row-grid">
+            <div class="form-row">
+              <label class="form-label" for="slipSupplierInput">납품처 / 입고 메모</label>
+              <input type="text" class="form-input" id="slipSupplierInput" placeholder="예: 매일유업·식자재 오전 납품" value="식자재 마트 정기 납품" />
+            </div>
+            <div class="form-row">
+              <label class="form-label">품목 행 추가</label>
+              <button type="button" class="header-btn" id="btnAddSlipRow" style="justify-content: center;">+ 리스트에 품목 1줄 추가</button>
+            </div>
+          </div>
+
+          <div class="slip-items-table-wrap">
+            <table class="slip-items-table">
+              <thead>
+                <tr>
+                  <th style="width: 34%;">품목명</th>
+                  <th style="width: 26%;">소비기한</th>
+                  <th style="width: 16%;">수량</th>
+                  <th style="width: 24%;">보관구역</th>
+                </tr>
+              </thead>
+              <tbody id="slipItemsTableBody">
+                <!-- Populated dynamically -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div style="display: flex; justify-content: flex-end; gap: 8px; padding-top: 6px;">
+        <button type="button" class="header-btn" id="btnSaveSlipPhotoOnly">사진만 보관함에 저장</button>
+        <button type="button" class="btn-add-stock" id="btnSaveSlipAndBulkReceive">명세서 사진 저장 + 리스트 품목 일괄 입고</button>
+      </div>
+    </div>
+
+    <!-- TAB 2: Saved Delivery Slips Archive -->
+    <div class="modal-body" id="slipTabArchivePanel" style="display: none;">
+      <div class="slip-archive-grid" id="slipArchiveGrid">
+        <!-- Populated dynamically -->
+      </div>
+    </div>
+  </dialog>
+
+  <!-- ====================================================================
+       MODAL 5: Full-Size Photo Lightbox Viewer (Product Photo / Delivery Slip)
+       ==================================================================== -->
+  <dialog class="modal-dialog" id="photoZoomDialog">
+    <div class="modal-header">
+      <h3 class="modal-title" id="photoZoomTitle">촬영 사진 원본 보기</h3>
+      <button type="button" class="modal-close-btn" id="btnClosePhotoZoom" aria-label="닫기">&times;</button>
+    </div>
+    <div class="modal-body" style="align-items: center; background-color: #0F172A;">
+      <img id="photoZoomImg" alt="확대 사진" style="max-width: 100%; max-height: 70vh; border-radius: 8px; object-fit: contain;" />
+      <p id="photoZoomCaption" style="color: #E2E8F0; font-size: 0.875rem; font-weight: 600;"></p>
+    </div>
+  </dialog>
+
+  <!-- ====================================================================
+       MODAL 2: Store Owner 1-Time Preset Rule Setting (당일포함 안전보관일)
+       ==================================================================== -->
+  <dialog class="modal-dialog" id="presetConfigDialog">
+    <div class="modal-header">
+      <h3 class="modal-title">자재 안전보관일 개별 추가 &amp; 브랜드 설정</h3>
+      <button type="button" class="modal-close-btn" id="btnClosePresetModal" aria-label="닫기">&times;</button>
+    </div>
+    <form id="presetConfigForm">
+      <div class="modal-body">
+        <div class="barcode-Quick-bar" style="flex-wrap: wrap; gap: 8px;">
+          <span>다른 브랜드나 개인 매장 CSV 파일이 있으신가요?</span>
+          <button type="button" class="btn-mini-action" id="btnOpenCsvFromPresetModal" style="border-color: var(--accent-primary); color: var(--accent-text); background-color: #FFFFFF; font-weight: 800;">
+            CSV 가져오기 / 브랜드 전환 열기
+          </button>
+        </div>
+        <div class="form-row-grid">
+          <div class="form-row">
+            <label class="form-label" for="presetCategoryInput">자재 분류 (직접 입력 가능)</label>
+            <input type="text" class="form-input" id="presetCategoryInput" list="presetCategoryList" placeholder="예: 시럽·소스, 수제청, 디저트" value="시럽·소스·액상" required />
+            <datalist id="presetCategoryList">
+              <option value="물베이스"></option>
+              <option value="우유·크림"></option>
+              <option value="시럽·소스·액상"></option>
+              <option value="파우더·토핑"></option>
+              <option value="펄·과일·커피"></option>
+              <option value="베이커리·케익"></option>
+              <option value="수제청·과일"></option>
+              <option value="원두·티베이스"></option>
+            </datalist>
+          </div>
+          <div class="form-row">
+            <label class="form-label" for="presetTypeInput">기준 구분 (소분/개봉/제조/해동)</label>
+            <select class="form-select" id="presetTypeInput">
+              <option value="소분">소분</option>
+              <option value="개봉">개봉</option>
+              <option value="제조">제조</option>
+              <option value="해동">해동</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <label class="form-label" for="presetTitleInput">버튼 표시 이름 (자재명)</label>
+          <input type="text" class="form-input" id="presetTitleInput" placeholder="예: 수제 자몽청 (소분)" required />
+        </div>
+        <div class="form-row">
+          <label class="form-label" for="presetFullNameInput">라벨 출력 정식 표기명</label>
+          <input type="text" class="form-input" id="presetFullNameInput" placeholder="예: 수제 자몽청 (소분)" required />
+        </div>
+        <div class="form-row-grid">
+          <div class="form-row">
+            <label class="form-label" for="presetDaysInput">안전보관일 (당일포함 일수, 1=당일폐기)</label>
+            <input type="number" class="form-input tabular-nums" id="presetDaysInput" min="1" max="365" value="5" required />
+          </div>
+          <div class="form-row">
+            <label class="form-label" for="presetStorageInput">보관 방법</label>
+            <select class="form-select" id="presetStorageInput">
+              <option value="냉장 (0~10℃)">냉장 (0~10℃)</option>
+              <option value="실온 (1~35℃)">실온 (1~35℃)</option>
+              <option value="냉동 (-18℃ 이하)">냉동 (-18℃ 이하)</option>
+              <option value="보온 (60~70℃)">보온 (60~70℃)</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="header-btn" id="btnResetDemoData">기본 데이터 초기화</button>
+        <button type="submit" class="btn-add-stock">새 품목 버튼 추가</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- ====================================================================
+       MODAL 6: Multi-Brand & CSV Import/Export Safety Storage Reference Table
+       ==================================================================== -->
+  <dialog class="modal-dialog modal-wide" id="manualTableDialog">
+    <div class="modal-header">
+      <div>
+        <h3 class="modal-title" id="manualModalTitle">식자재 안전보관일 기준표 · 브랜드 &amp; CSV 파일 관리</h3>
+        <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 2px;">
+          여러 프랜차이즈 브랜드나 개인 카페의 CSV 파일을 자유롭게 가져오거나 내보낼 수 있습니다 (UTF-8 / 엑셀 EUC-KR 자동 호환)
+        </p>
+      </div>
+      <button type="button" class="modal-close-btn" id="btnCloseManualModal" aria-label="닫기">&times;</button>
+    </div>
+
+    <div class="modal-body" style="max-height: 76vh; overflow-y: auto; padding: 14px 18px; gap: 12px;">
+      <!-- Multi-Brand Switcher & CSV Import/Export Toolbar -->
+      <div class="csv-brand-toolbar">
+        <div class="csv-brand-row">
+          <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+            <label for="brandTemplateSelect" style="font-size: 0.8125rem; font-weight: 800; color: var(--text-primary); white-space: nowrap;">브랜드/템플릿 선택</label>
+            <select class="filter-select" id="brandTemplateSelect" style="height: 36px; min-width: 210px;">
+              <option value="MEGA">메가MGC커피 기본 (75종)</option>
+              <option value="FRANCHISE">일반 프랜차이즈 커피 표준 (20종)</option>
+              <option value="PERSONAL">개인 카페 · 수제청 · 베이커리 (16종)</option>
+              <option value="CUSTOM">사용자 CSV / 커스텀 브랜드</option>
+            </select>
+            <input
+              type="text"
+              class="form-input"
+              id="customBrandNameInput"
+              placeholder="매장/브랜드명 (예: 우리동네카페)"
+              style="height: 36px; width: 180px; font-size: 0.8125rem;"
+            />
+          </div>
+
+          <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+            <label class="btn-add-stock" style="height: 36px; padding: 0 12px; font-size: 0.75rem; cursor: pointer; background-color: var(--accent-primary);">
+              <span>CSV 가져오기 (전체 교체)</span>
+              <input type="file" id="csvFileReplaceInput" accept=".csv,.txt" style="display: none;" />
+            </label>
+            <label class="header-btn" style="height: 36px; padding: 0 11px; font-size: 0.75rem; cursor: pointer; border-color: var(--accent-primary); color: var(--accent-text); background-color: var(--accent-surface);">
+              <span>+ CSV 추가 (기존에 합치기)</span>
+              <input type="file" id="csvFileAppendInput" accept=".csv,.txt" style="display: none;" />
+            </label>
+            <button type="button" class="header-btn" id="btnExportCsv" style="height: 36px; padding: 0 11px; font-size: 0.75rem;">
+              <span>현재 기준표 CSV 저장</span>
+            </button>
+            <button type="button" class="header-btn" id="btnDownloadSampleCsv" style="height: 36px; padding: 0 11px; font-size: 0.75rem;">
+              <span>샘플 CSV 양식</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="csv-status-banner" id="csvImportBanner">
+          현재 적용 브랜드: <strong id="currentBrandBadgeText">메가MGC커피 (75종)</strong> · 엑셀에서 편집한 CSV 파일(분류, 자재명, 기준, 안전보관일, 보관방법, 단위, 비고)을 그대로 불러올 수 있습니다.
+        </div>
+      </div>
+
+      <div class="slip-items-table-wrap" style="max-height: none;">
+        <table class="slip-items-table">
+          <thead>
+            <tr>
+              <th>분류</th>
+              <th>자재명</th>
+              <th>기준</th>
+              <th>안전보관일 (당일포함)</th>
+              <th>보관방법</th>
+              <th>비고 / 해동기준</th>
+              <th>출력 / 관리</th>
+            </tr>
+          </thead>
+          <tbody id="manualReferenceTableBody">
+            <!-- Populated dynamically by app.js -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- ====================================================================
+       MODAL 7: Favorite Item Selector (자주 쓰는 품목 선택)
+       ==================================================================== -->
+  <dialog class="modal-dialog modal-wide" id="favSelectDialog">
+    <div class="modal-header">
+      <div>
+        <h3 class="modal-title">★ 자주 쓰는 품목 선택</h3>
+        <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 2px;">
+          체크한 품목만 [★ 자주 쓰는 품목]을 눌렀을 때 크게 모아 표시됩니다
+        </p>
+      </div>
+      <button type="button" class="modal-close-btn" id="btnCloseFavSelectModal" aria-label="닫기">&times;</button>
+    </div>
+    <div class="modal-body" style="max-height: 72vh; overflow-y: auto; padding: 14px 18px; gap: 12px;">
+      <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
+        <input
+          type="search"
+          class="form-input"
+          id="favModalSearchInput"
+          placeholder="자주 쓰는 품목 검색..."
+          style="height: 36px; width: 240px; font-size: 0.8125rem;"
+        />
+        <div style="display: flex; align-items: center; gap: 6px;">
+          <button type="button" class="header-btn" id="btnFavResetRecommended" style="height: 34px; font-size: 0.75rem;">
+            핵심 6종 추천 선택
+          </button>
+          <button type="button" class="header-btn" id="btnFavClearAll" style="height: 34px; font-size: 0.75rem;">
+            전체 해제
+          </button>
+        </div>
+      </div>
+
+      <div class="fav-picker-grid" id="favPickerModalGrid">
+        <!-- Populated dynamically by app.js -->
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn-add-stock" id="btnDoneFavSelectModal">선택 완료</button>
+    </div>
+  </dialog>
+
+  <!-- ====================================================================
+       MODAL 3: FIFO Violation Warning Dialog (Prevents Opening Newer Stock First)
+       ==================================================================== -->
+  <dialog class="modal-dialog" id="fifoWarningDialog">
+    <div class="modal-header">
+      <h3 class="modal-title">선입선출(FIFO) 순서 주의 알림</h3>
+      <button type="button" class="modal-close-btn" id="btnCloseFifoWarn" aria-label="닫기">&times;</button>
+    </div>
+    <div class="modal-body">
+      <p id="fifoWarnMessage" style="font-weight: 700; color: var(--danger-text); line-height: 1.55;"></p>
+      <p style="font-size: 0.875rem; color: var(--text-secondary);">
+        뒤에 있는 새 재고를 먼저 개봉하면 앞선 재고의 소비기한이 경과하여 폐기 손실이 발생합니다.
+      </p>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="header-btn" id="btnCancelFifoOverride">취소 (앞선 로트 개봉하기)</button>
+      <button type="button" class="btn-open-pack urgent-fifo" id="btnConfirmFifoOverride">그래도 이 로트 개봉 + 라벨출력</button>
+    </div>
+  </dialog>
+
+  <!-- ====================================================================
+       MODAL 8: Google Account (Google Sheets) Personal Cloud Sync Dialog
+       (제작자 서버비 0원 · 다운받은 사람 본인의 구글 드라이브/시트에 자동 저장 및 타 기기 연동)
+       ==================================================================== -->
+  <dialog class="modal-dialog modal-wide" id="googleSyncDialog">
+    <div class="modal-header">
+      <div>
+        <h3 class="modal-title">내 구글 계정(스프레드시트) 실시간 연동 · 다른 핸드폰 확인</h3>
+        <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 2px;">
+          외부 유료 서버 없이 <strong>본인 구글 계정의 스프레드시트</strong>에 실시간 저장되어 매장 태블릿과 사장님 핸드폰에서 동시에 확인합니다
+        </p>
+      </div>
+      <button type="button" class="modal-close-btn" id="btnCloseGoogleSyncModal" aria-label="닫기">&times;</button>
+    </div>
+
+    <div class="modal-body" style="max-height: 76vh; overflow-y: auto; padding: 16px 20px; gap: 14px;">
+      <!-- Live Connection Status & Instant Sync Bar -->
+      <div class="google-sync-status-card" id="googleSyncStatusCard">
+        <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <span class="sync-dot" id="googleSyncDot"></span>
+            <div>
+              <div style="font-size: 0.9375rem; font-weight: 900; color: var(--text-primary);" id="googleSyncStatusTitle">
+                현재 기기 단독 저장 모드 (구글 시트 미연결)
+              </div>
+              <div class="tabular-nums" style="font-size: 0.78125rem; font-weight: 700; color: var(--text-secondary);" id="googleSyncStatusSub">
+                아래에 내 구글 스프레드시트 연동 주소를 입력하면 다른 핸드폰에서도 실시간으로 재고를 확인할 수 있습니다.
+              </div>
+            </div>
+          </div>
+
+          <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 8px;">
+            <button type="button" class="header-btn" id="btnPullFromGoogleSheet" style="height: 36px; font-weight: 800;">
+              🔄 시트에서 최신 불러오기
+            </button>
+            <button type="button" class="btn-add-stock" id="btnPushToGoogleSheet" style="height: 36px; padding: 0 14px; font-size: 0.8125rem;">
+              ☁️ 지금 구글 시트에 저장
+            </button>
+          </div>
+        </div>
+
+        <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; padding-top: 10px; border-top: 1px dashed var(--border-subtle);">
+          <label style="display: inline-flex; align-items: center; gap: 8px; font-size: 0.8125rem; font-weight: 800; color: var(--text-primary); cursor: pointer;">
+            <input type="checkbox" id="chkGoogleAutoSync" checked style="width: 17px; height: 17px; accent-color: var(--accent-primary);" />
+            <span>자동 동기화 켜기 (재고 차감·입고 시 0.3초 만에 자동 저장 + 5초마다 및 핸드폰 화면 켤 때 즉시 자동 갱신)</span>
+          </label>
+          <a href="https://docs.google.com/spreadsheets" target="_blank" rel="noopener" id="linkOpenMyGoogleSheet" style="font-size: 0.78125rem; font-weight: 800; color: var(--accent-text); text-decoration: underline;">
+            내 구글 스프레드시트 열기 ↗
+          </a>
+        </div>
+      </div>
+
+      <!-- 2~3 Devices Simultaneous Sync Ultra-Simple Box -->
+      <div class="google-sync-box" style="border: 1.5px solid #93C5FD; background: linear-gradient(180deg, #EFF6FF 0%, #FFFFFF 100%);">
+        <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; margin-bottom: 10px;">
+          <div>
+            <div style="font-size: 0.9375rem; font-weight: 900; color: #1E3A8A;">
+              📱 매장 기기 2~3대 (태블릿 + 사장님 폰 + 매니저 폰) 10초 동시 연결
+            </div>
+            <div style="font-size: 0.78125rem; font-weight: 700; color: #334155; margin-top: 2px;">
+              복잡한 회원가입 없이 <strong>같은 구글 시트 주소 1개</strong>만 연결하면 2~3대 기기가 실시간으로 같은 재고·통계를 공유합니다!
+            </div>
+          </div>
+          <button type="button" class="btn-add-stock" id="btnCopyPhoneSyncLink" style="height: 38px; padding: 0 14px; font-size: 0.8125rem; background-color: #2563EB; border-color: #1D4ED8;">
+            📲 카톡/문자로 다른 폰 1초 자동연결 링크 복사
+          </button>
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 8px; margin-bottom: 12px;">
+          <div style="padding: 9px 12px; border-radius: 8px; background: #FFFFFF; border: 1px solid #BFDBFE; font-size: 0.78125rem; font-weight: 700; color: #1E293B;">
+            <strong style="color: #2563EB;">① 첫 기기(매장 태블릿/PC)</strong>에서 아래 주소를 저장한 뒤 <strong>[자동연결 링크 복사]</strong>를 눌러 카톡으로 보냅니다.
+          </div>
+          <div style="padding: 9px 12px; border-radius: 8px; background: #FFFFFF; border: 1px solid #BFDBFE; font-size: 0.78125rem; font-weight: 700; color: #1E293B;">
+            <strong style="color: #059669;">② 2·3번째 폰(사장님/직원 폰)</strong>에서 카톡 링크를 터치하기만 하면 <strong>주소 입력 없이 즉시 자동 연결</strong>됩니다!
+          </div>
+        </div>
+
+        <div style="font-size: 0.8125rem; font-weight: 900; color: var(--text-primary); margin-bottom: 6px;">
+          🔗 내 구글 시트 연동 주소 입력칸
+        </div>
+        <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 8px;">
+          <input
+            type="url"
+            class="form-input"
+            id="googleSheetWebAppUrlInput"
+            placeholder="https://script.google.com/macros/s/.../exec 주소를 붙여넣고 [연결 저장]을 누르세요"
+            style="flex: 1; min-width: 240px; height: 40px; font-size: 0.8125rem;"
+          />
+          <button type="button" class="btn-add-stock" id="btnSaveGoogleSyncUrl" style="height: 40px; padding: 0 16px;">
+            연결 저장
+          </button>
+          <button type="button" class="header-btn" id="btnDisconnectGoogleSync" style="height: 40px; color: var(--danger-text);">
+            연결 해제
+          </button>
+        </div>
+      </div>
+
+      <!-- Simplified 3-Step First-Time Setup Guide -->
+      <div class="google-sync-guide-box">
+        <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; margin-bottom: 10px;">
+          <div>
+            <div style="font-size: 0.875rem; font-weight: 900; color: var(--text-primary);">
+              🟢 처음 딱 1번! 내 구글 시트 만들기 3단계 (서버비 평생 0원)
+            </div>
+            <div style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600;">
+              우리 매장에서 처음 세팅할 때 딱 한 번만 만들면 됩니다. (2·3번째 폰은 위 카톡 링크만 누르면 끝!)
+            </div>
+          </div>
+          <div style="display: flex; align-items: center; gap: 6px;">
+            <a
+              href="https://sheets.new"
+              target="_blank"
+              rel="noopener"
+              class="header-btn"
+              style="height: 34px; font-size: 0.78125rem; font-weight: 800; text-decoration: none; display: inline-flex; align-items: center;"
+            >
+              1. 새 구글 시트 열기 ↗
+            </a>
+            <button
+              type="button"
+              class="btn-add-stock"
+              id="btnCopyAppsScriptCode"
+              style="height: 34px; padding: 0 12px; font-size: 0.78125rem;"
+            >
+              2. 자동 연동 코드 복사하기
+            </button>
+          </div>
+        </div>
+
+        <ol class="google-sync-steps">
+          <li><strong>[1단계]</strong> 위 <strong>[1. 새 구글 시트 열기]</strong>와 <strong>[2. 자동 연동 코드 복사하기]</strong>를 순서대로 누릅니다.</li>
+          <li><strong>[2단계]</strong> 열린 구글 시트 상단 <strong>[확장 프로그램] &rarr; [Apps Script]</strong>를 눌러 기존 글자를 지우고 <strong>코드 붙여넣기 + 저장(Ctrl+S)</strong>을 누릅니다.</li>
+          <li><strong>[3단계]</strong> 우측 상단 <strong>[배포] &rarr; [새 배포] &rarr; 유형: [웹 앱] &rarr; 액세스 권한: [모든 사용자]</strong>로 배포 후 나온 <strong>웹 앱 URL</strong>을 위 입력칸에 붙여넣으면 완료!</li>
+        </ol>
+      </div>
+
+      <!-- Offline Full Backup File Export/Import -->
+      <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; padding: 10px 14px; background: #F8FAFC; border: 1px solid var(--border-subtle); border-radius: 10px;">
+        <span style="font-size: 0.78125rem; font-weight: 800; color: var(--text-secondary);">
+          💾 파일로 직접 백업·이동하기 (카카오톡/파일로 다른 기기에 전체 데이터 바로 옮기기)
+        </span>
+        <div style="display: flex; align-items: center; gap: 6px;">
+          <button type="button" class="header-btn" id="btnExportFullBackupJson" style="height: 32px; font-size: 0.75rem;">
+            전체 백업파일(.json) 저장
+          </button>
+          <label for="fullBackupJsonInput" class="header-btn" style="height: 32px; font-size: 0.75rem; cursor: pointer; display: inline-flex; align-items: center;">
+            백업파일 불러오기
+          </label>
+          <input type="file" id="fullBackupJsonInput" accept=".json,application/json" style="display: none;" />
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button type="button" class="header-btn" id="btnDoneGoogleSyncModal">닫기</button>
+    </div>
+  </dialog>
+
+  <!-- ====================================================================
+       MODAL 9: Trial vs 30,000 KRW Lifetime Full Version Upgrade & Key Activation
+       ==================================================================== -->
+  <dialog class="modal-dialog modal-wide" id="licenseDialog">
+    <div class="modal-header">
+      <div>
+        <h3 class="modal-title" id="licenseModalTitle">FreshLabel 정식판 안내 (30,000원 평생 소장)</h3>
+        <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 2px;" id="licenseModalSubtitle">
+          월 구독료 없이 딱 한 번 <strong>30,000원</strong>으로 매장 모든 기능을 평생 제한 없이 사용하세요
+        </p>
+      </div>
+      <button type="button" class="modal-close-btn" id="btnCloseLicenseModal" aria-label="닫기">&times;</button>
+    </div>
+
+    <div class="modal-body" style="max-height: 76vh; overflow-y: auto; padding: 16px 20px; gap: 14px;">
+      <!-- Lock Alert Notice (Shown when user clicked a locked feature in Trial mode) -->
+      <div class="license-lock-alert" id="licenseLockAlertBox" style="display: none;">
+        <span id="licenseLockAlertText">🔒 선택한 기능은 [30,000원 정식판] 전용 기능입니다.</span>
+      </div>
+
+      <!-- 2-Column Comparison: 무료 체험판 vs 30,000원 정식판 -->
+      <div class="license-compare-grid">
+        <!-- Left: Trial -->
+        <div class="license-plan-card trial-card" id="planCardTrial">
+          <div class="license-plan-header">
+            <span class="license-plan-badge trial">무료 체험판</span>
+            <div class="license-plan-price">0원 <small>/ 기본 체험</small></div>
+          </div>
+          <ul class="license-feature-list">
+            <li class="ok">✓ 기본 샘플 품목 <strong>6종</strong> 라벨 출력 체험</li>
+            <li class="ok">✓ 자주 쓰는 품목 분할 화면 & 라벨 미리보기</li>
+            <li class="locked">🔒 전체 품목(57종+) 사용 및 새 품목 추가 불가</li>
+            <li class="locked">🔒 엑셀(CSV) 매장 품목 일괄 등록 불가</li>
+            <li class="locked">🔒 <strong>[사용 차감 (-재고)] · [원터치 입고]</strong> 잠금</li>
+            <li class="locked">🔒 <strong>[구글 연동] (다른 핸드폰 실시간 확인)</strong> 잠금</li>
+          </ul>
+        </div>
+
+        <!-- Right: 30,000 KRW Lifetime Full Version -->
+        <div class="license-plan-card full-card" id="planCardFull">
+          <div class="license-plan-header">
+            <span class="license-plan-badge full">👑 정식판 (평생 소장권)</span>
+            <div class="license-plan-price tabular-nums">30,000원 <small>/ 1회 결제 · 월 요금 0원</small></div>
+          </div>
+          <ul class="license-feature-list">
+            <li class="ok strong">✓ <strong>전 품목 무제한 라벨 출력 & 품목 자유 추가</strong></li>
+            <li class="ok strong">✓ <strong>브랜드별·개인매장 엑셀(CSV) 1초 일괄 등록</strong></li>
+            <li class="ok strong">✓ <strong>[사용 차감 (-1)] & [원터치 입고 (+재고)] 전체 해제</strong></li>
+            <li class="ok strong">✓ <strong>[내 구글 시트 실시간 연동] (다른 핸드폰 동시 확인)</strong></li>
+            <li class="ok strong">✓ <strong>[상세 관리] 선입선출 로트 관리 & 거래명세서 보관</strong></li>
+            <li class="ok strong">✓ <strong>월 구독료·서버비 평생 0원</strong></li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Purchase / Inquiry Action Box (Point 1: 30,000원 정식판 구매 문의 및 링크 연결) -->
+      <div class="google-sync-box" style="border: 1.5px solid #F59E0B; background: linear-gradient(180deg, #FFFBEB 0%, #FFFFFF 100%);">
+        <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
+          <div>
+            <div style="font-size: 0.9rem; font-weight: 900; color: #92400E;">
+              💬 30,000원 정식판 구매 / 우리 매장 평생 인증코드 즉시 발급받기
+            </div>
+            <div style="font-size: 0.78125rem; font-weight: 700; color: #78350F; margin-top: 2px;">
+              1회 결제(30,000원) 즉시 매장 전용 인증코드(`FL30-매장명-코드`)를 카톡/문자로 발송해 드립니다. (월 구독료·추가금 평생 0원)
+            </div>
+          </div>
+          <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 8px;">
+            <button
+              type="button"
+              class="header-btn"
+              id="btnCopyPurchaseInquiry"
+              style="height: 38px; padding: 0 12px; font-size: 0.8125rem; font-weight: 800; border-color: #D97706; color: #92400E; background-color: #FFFFFF;"
+            >
+              📋 구매 신청 카톡문구 복사
+            </button>
+            <a
+              href="https://open.kakao.com/"
+              target="_blank"
+              rel="noopener"
+              id="btnPurchaseKakaoLink"
+              class="btn-add-stock"
+              style="height: 38px; padding: 0 16px; font-size: 0.8125rem; background-color: #F59E0B; border-color: #D97706; color: #FFFFFF; text-decoration: none; display: inline-flex; align-items: center;"
+            >
+              💬 카카오톡 구매·코드발급 문의 ↗
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <!-- License Key Input Box -->
+      <div class="license-activate-box">
+        <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 6px; margin-bottom: 8px;">
+          <div style="font-size: 0.9rem; font-weight: 900; color: var(--text-primary);">
+            🔑 정식판 인증코드(시리얼 번호) 입력
+          </div>
+          <span style="font-size: 0.75rem; font-weight: 700; color: var(--accent-text);" id="licenseStatusCurrentText">
+            현재 상태: 무료 체험판
+          </span>
+        </div>
+
+        <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 8px;">
+          <input
+            type="text"
+            class="form-input tabular-nums"
+            id="licenseKeyInput"
+            placeholder="구매 후 발급받은 인증코드 입력 (예: FL30-STORE-XXXX)"
+            style="flex: 1; min-width: 220px; height: 42px; font-size: 0.875rem; font-weight: 800; text-transform: uppercase;"
+          />
+          <button type="button" class="btn-add-stock" id="btnActivateLicenseKey" style="height: 42px; padding: 0 18px; font-size: 0.875rem;">
+            정식판 잠금 해제
+          </button>
+        </div>
+        <div style="margin-top: 6px; font-size: 0.78125rem; font-weight: 700; color: var(--text-secondary);" id="licenseActivateFeedback">
+          30,000원 정식판 구매 시 전달받은 인증코드를 입력하면 즉시 모든 기능 잠금이 해제됩니다.
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button type="button" class="header-btn" id="btnDoneLicenseModal">닫기</button>
+    </div>
+  </dialog>
+
+  <!-- ====================================================================
+       MODAL 10: Thermal Label Printer Connection & Print Settings Dialog
+       ==================================================================== -->
+  <dialog class="modal-dialog modal-wide" id="printerSetupDialog">
+    <div class="modal-header">
+      <div>
+        <h3 class="modal-title">🖨️ 라벨 프린터 연결 및 원터치 출력 설정</h3>
+        <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 2px;">
+          PC·포스기·태블릿·스마트폰에 연결된 감열 라벨 프린터(USB / 블루투스 / Wi-Fi)를 연동합니다
+        </p>
+      </div>
+      <button type="button" class="modal-close-btn" id="btnClosePrinterModal" aria-label="닫기">&times;</button>
+    </div>
+
+    <div class="modal-body" style="max-height: 76vh; overflow-y: auto; padding: 16px 20px; gap: 14px;">
+      <!-- Current Printer Status Banner -->
+      <div class="google-sync-status-card" id="printerModalStatusCard">
+        <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <span class="sync-dot" id="printerModalDot"></span>
+            <div>
+              <div style="font-size: 0.9375rem; font-weight: 900; color: var(--text-primary);" id="printerModalStatusTitle">
+                현재 상태: 화면 미리보기 모드 (실제 프린터 미연결)
+              </div>
+              <div style="font-size: 0.78125rem; font-weight: 700; color: var(--text-secondary);" id="printerModalStatusSub">
+                아래 3가지 연결 방식 중 하나를 선택해 연결하면 품목 버튼을 누를 때 실제 라벨이 출력됩니다.
+              </div>
+            </div>
+          </div>
+
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <button type="button" class="btn-add-stock" id="btnModalTestPrint" style="height: 36px; padding: 0 14px; font-size: 0.8125rem;">
+              🖨️ 테스트 라벨 인쇄
+            </button>
+            <button type="button" class="header-btn" id="btnModalDisconnectPrinter" style="height: 36px; color: var(--danger-text);">
+              연결 해제
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Method 1: System / OS Default Printer (Works 100% everywhere including file://) -->
+      <div class="google-sync-guide-box" style="background-color: #F0FDF4; border-color: #86EFAC;">
+        <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
+          <div style="flex: 1; min-width: 220px;">
+            <div style="font-size: 0.9rem; font-weight: 900; color: #065F46;">
+              1. 기본 라벨 프린터 연동 (가장 추천 · 모든 기기 100% 호환)
+            </div>
+            <div style="font-size: 0.78125rem; font-weight: 700; color: var(--text-secondary); margin-top: 3px;">
+              윈도우 PC·포스기·맥·태블릿·스마트폰에 이미 USB, 블루투스, Wi-Fi로 잡혀 있는 모든 프린터(빅솔론, 브라더, 엡손, Xprinter, 제브라 등)로 품목 터치 즉시 인쇄합니다.
+            </div>
+          </div>
+          <button type="button" class="btn-add-stock" id="btnConnectSystemPrinter" style="height: 42px; padding: 0 18px; font-size: 0.875rem;">
+            ✓ 기본 프린터로 연결하기
+          </button>
+        </div>
+      </div>
+
+      <!-- Method 2 & 3: Direct BLE Bluetooth & USB Serial Port -->
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 12px;">
+        <div class="google-sync-box" style="display: flex; flex-direction: column; justify-content: space-between; gap: 10px;">
+          <div>
+            <div style="font-size: 0.875rem; font-weight: 900; color: var(--text-primary);">
+              2. 블루투스(BLE) 프린터 직접 검색
+            </div>
+            <div style="font-size: 0.75rem; font-weight: 600; color: var(--text-secondary); margin-top: 3px;">
+              휴대용 블루투스 감열 프린터(ESC/POS 호환)를 직접 검색하여 무선 페어링합니다.
+            </div>
+          </div>
+          <button type="button" class="header-btn" id="btnConnectBleModal" style="height: 40px; width: 100%; justify-content: center; font-weight: 800; border-color: var(--border-strong); color: var(--text-primary);">
+            📡 블루투스 프린터 검색 및 연결
+          </button>
+        </div>
+
+        <div class="google-sync-box" style="display: flex; flex-direction: column; justify-content: space-between; gap: 10px;">
+          <div>
+            <div style="font-size: 0.875rem; font-weight: 900; color: var(--text-primary);">
+              3. USB 케이블 포트(Serial) 직접 연결
+            </div>
+            <div style="font-size: 0.75rem; font-weight: 600; color: var(--text-secondary); margin-top: 3px;">
+              PC·포스기에 USB 선으로 꽂힌 감열 프린터(COM 포트)와 직접 통신합니다.
+            </div>
+          </div>
+          <button type="button" class="header-btn" id="btnConnectUsbModal" style="height: 40px; width: 100%; justify-content: center; font-weight: 800; border-color: var(--border-strong); color: var(--text-primary);">
+            🔌 USB 포트 프린터 선택 및 연결
+          </button>
+        </div>
+      </div>
+
+      <!-- Paper Size & Print Options -->
+      <div class="google-sync-box" style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; background-color: #F8FAFC;">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <label for="printerPaperSizeSelect" style="font-size: 0.8125rem; font-weight: 800; color: var(--text-primary);">
+            📏 감열 라벨 용지 규격:
+          </label>
+          <select id="printerPaperSizeSelect" class="filter-select" style="height: 36px; min-width: 190px;">
+            <option value="58x40">58mm × 40mm (표준 카페 라벨)</option>
+            <option value="40x30">40mm × 30mm (소형 소분 라벨)</option>
+            <option value="50x30">50mm × 30mm (중형 소분 라벨)</option>
+          </select>
+        </div>
+
+        <label style="display: inline-flex; align-items: center; gap: 7px; font-size: 0.8125rem; font-weight: 800; color: var(--text-primary); cursor: pointer;">
+          <input type="checkbox" id="chkPrinterSound" checked style="width: 16px; height: 16px; accent-color: var(--accent-primary);" />
+          <span>라벨 출력 효과음 켜기</span>
+        </label>
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button type="button" class="header-btn" id="btnDonePrinterModal">닫기</button>
+    </div>
+  </dialog>
+
+  <!-- Toast Container -->
+  <div class="toast-container" id="toastContainer" aria-live="polite"></div>
+
+  <script src="./printer.js?v=20261029"></script>
+  <script src="./app.js?v=20261029"></script>
+</body>
+</html>
