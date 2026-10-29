@@ -3745,3 +3745,109 @@ dialog.modal-dialog::backdrop {
     gap: 10px;
   }
 }
+
+/* ==========================================================================
+   Modal layout fix: no horizontal overflow, single clean vertical scroll (mobile & desktop)
+   ========================================================================== */
+dialog.modal-dialog {
+  box-sizing: border-box;
+  width: min(560px, calc(100vw - 16px));
+  max-width: calc(100vw - 16px);
+  max-height: calc(100vh - 16px);
+  max-height: calc(100dvh - 16px);
+  overflow: hidden;
+}
+dialog.modal-dialog.modal-wide {
+  width: min(820px, calc(100vw - 16px));
+}
+dialog.modal-dialog[open] {
+  display: flex;
+  flex-direction: column;
+}
+dialog.modal-dialog *,
+dialog.modal-dialog *::before,
+dialog.modal-dialog *::after {
+  box-sizing: border-box;
+}
+dialog.modal-dialog > form {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  min-width: 0;
+  margin: 0;
+}
+dialog.modal-dialog > .modal-header,
+dialog.modal-dialog > .modal-footer,
+dialog.modal-dialog > .modal-tabs,
+dialog.modal-dialog > form > .modal-footer {
+  flex: 0 0 auto;
+}
+dialog.modal-dialog > .modal-body,
+dialog.modal-dialog > form > .modal-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  min-width: 0;
+  max-height: none !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+dialog.modal-dialog .modal-body > *,
+dialog.modal-dialog .modal-body .form-row,
+dialog.modal-dialog .modal-body .form-row-grid > * {
+  min-width: 0;
+  max-width: 100%;
+}
+dialog.modal-dialog .form-row-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+dialog.modal-dialog .form-input,
+dialog.modal-dialog .form-select,
+dialog.modal-dialog input[type="text"],
+dialog.modal-dialog input[type="number"],
+dialog.modal-dialog select,
+dialog.modal-dialog textarea {
+  max-width: 100%;
+  min-width: 0;
+}
+dialog.modal-dialog .slip-items-table-wrap {
+  overflow-x: auto;
+}
+body:has(dialog[open]) {
+  overflow: hidden;
+}
+
+@media (max-width: 640px) {
+  dialog.modal-dialog,
+  dialog.modal-dialog.modal-wide {
+    width: calc(100vw - 16px);
+    border-radius: 14px;
+  }
+  dialog.modal-dialog .modal-header {
+    padding: 12px 14px;
+  }
+  dialog.modal-dialog .modal-body {
+    padding: 14px !important;
+    gap: 12px;
+  }
+  dialog.modal-dialog .modal-footer {
+    padding: 10px 14px;
+    flex-wrap: wrap;
+  }
+  dialog.modal-dialog .form-row-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  dialog.modal-dialog .barcode-Quick-bar {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  dialog.modal-dialog .modal-body button,
+  dialog.modal-dialog .modal-body a.btn-add-stock {
+    max-width: 100%;
+  }
+  dialog.modal-dialog .license-compare-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
