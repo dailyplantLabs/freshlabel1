@@ -7,7 +7,7 @@
   <title>FreshLabel — 미개봉 선입선출 &amp; 소분 라벨 원터치 관리</title>
   <link rel="manifest" href="./manifest.json" />
   <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
-  <link rel="stylesheet" href="./styles.css?v=20261029_7" />
+  <link rel="stylesheet" href="./styles.css?v=20261029_8" />
 </head>
 <body>
   <div class="app-shell" data-app-mode="SIMPLE">
@@ -179,7 +179,7 @@
         <div class="simple-sticker-card">
           <div class="simple-inline-status" id="simpleStockFeedbackBox">
             <span class="simple-feedback-badge" id="simpleFeedbackTitle">품목 버튼을 누르면 즉시 출력됩니다</span>
-            <span class="simple-feedback-desc tabular-nums" id="simpleFeedbackSub">우유 1L · 재고 21팩</span>
+            <span class="simple-feedback-desc tabular-nums" id="simpleFeedbackSub"></span>
           </div>
 
           <div class="thermal-label-paper" id="simpleStickerPaper" data-paper-size="58x40">
@@ -417,11 +417,6 @@
             <select class="filter-select" id="statsItemSelect" aria-label="통계 품목 선택" style="min-width: 195px; height: 38px;">
               <option value="ALL">전체 자재 합산 보기</option>
             </select>
-
-            <label style="display: inline-flex; align-items: center; gap: 6px; padding: 0 10px; height: 38px; border-radius: 8px; border: 1px solid var(--border-strong); background: #FFFFFF; font-size: 0.78125rem; font-weight: 800; color: var(--text-secondary); cursor: pointer;">
-              <input type="checkbox" id="chkStatsSampleData" checked style="width: 15px; height: 15px; accent-color: var(--accent-primary);" />
-              <span>예시 추이 포함</span>
-            </label>
           </div>
         </div>
 
@@ -1580,6 +1575,6 @@
   <div class="toast-container" id="toastContainer" aria-live="polite"></div>
 
   <script src="./printer.js?v=20261029_5"></script>
-  <script src="./app.js?v=20261029_6"></script>
+  <script src="./app.js?v=20261029_8"></script>
 </body>
 </html>

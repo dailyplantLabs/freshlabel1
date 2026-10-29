@@ -367,21 +367,9 @@
 
   function createDefaultState() {
     const now = new Date();
-    const openedTodayMorning = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 9, 30);
-    const openedTwoDaysAgo = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 2, 10, 0);
-    const yesterdayMorning = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1, 8, 40);
 
     const presets = createDefaultPresets();
 
-    const sampleSlip1Items = [
-      { name: '매일우유 1L', expiryDate: addDaysToDateStr(now, 8), qty: 18, zone: '우유·유제품 냉장' },
-      { name: '블루베리베이스 1.2kg', expiryDate: addDaysToDateStr(now, 14), qty: 6, zone: '시럽·소스·베이스 냉장' }
-    ];
-
-    const sampleSlip2Items = [
-      { name: '파인애플과육 베이스', expiryDate: addDaysToDateStr(now, 16), qty: 5, zone: '시럽·소스·베이스 냉장' },
-      { name: '에스프레소 원두 1kg', expiryDate: addDaysToDateStr(now, 19), qty: 6, zone: '커피바·파우더·실온' }
-    ];
 
     // Example inclusive calculation for initial sticker (우유 개봉: 당일포함 3일 -> +2일)
     const milkPreset = presets.find((p) => p.id === 'preset-milk');
@@ -393,249 +381,24 @@
       simpleSearchQuery: '',
       receiveCategory: 'ALL',
       receiveSearchQuery: '',
-      receiveHistory: [
-        {
-          id: 'rec-init-1',
-          presetId: 'preset-milk',
-          productId: 'prod-milk',
-          itemName: '우유 1L (매일우유)',
-          qty: 18,
-          unit: '팩',
-          expiryDate: addDaysToDateStr(now, 8),
-          timeStr: formatDateTime(openedTodayMorning)
-        },
-        {
-          id: 'rec-init-2',
-          presetId: 'preset-blueberry-sub',
-          productId: 'prod-blueberry',
-          itemName: '블루베리베이스 1.2kg',
-          qty: 5,
-          unit: '통',
-          expiryDate: addDaysToDateStr(now, 16),
-          timeStr: formatDateTime(openedTodayMorning)
-        }
-      ],
+      receiveHistory: [],
       currentStaff: '알바 A (김민지)',
       selectedZone: 'ALL',
       viewMode: 'BY_DAYS',
       ddayFilter: 'ALL',
       selectedPresetCategory: 'ALL',
       presetSearchQuery: '',
-      labelSequence: 105,
-      roiSavedKrw: 485000,
+      labelSequence: 1,
+      roiSavedKrw: 0,
+      statsIncludeSample: false,
+      demoDataCleared: true,
       presets,
-      unopenedProducts: [
-        {
-          id: 'prod-milk',
-          name: '우유 1L (매일우유)',
-          unit: '팩',
-          zone: '우유·유제품 냉장',
-          linkedPresetId: 'preset-milk',
-          photoUrl: generateProductPhotoDataUrl('우유 1L (개봉 시 3일·당일포함)', '우유·유제품 냉장 (0~10℃)', '#0284C7', addDaysToDateStr(now, 1)),
-          lots: [
-            { id: 'lot-m1', expiryDate: addDaysToDateStr(now, 1), qty: 3 },
-            { id: 'lot-m2', expiryDate: addDaysToDateStr(now, 8), qty: 18 }
-          ]
-        },
-        {
-          id: 'prod-whip',
-          name: '일반 휘핑크림 500ml',
-          unit: '팩',
-          zone: '우유·유제품 냉장',
-          linkedPresetId: 'preset-whip-cream',
-          photoUrl: generateProductPhotoDataUrl('일반 휘핑크림 (당일포함 3일)', '우유·유제품 냉장 (0~10℃)', '#059669', addDaysToDateStr(now, 2)),
-          lots: [
-            { id: 'lot-c1', expiryDate: addDaysToDateStr(now, 2), qty: 4 },
-            { id: 'lot-c2', expiryDate: addDaysToDateStr(now, 11), qty: 8 }
-          ]
-        },
-        {
-          id: 'prod-fresh-cream',
-          name: '생크림 500ml',
-          unit: '팩',
-          zone: '우유·유제품 냉장',
-          linkedPresetId: 'preset-fresh-cream',
-          photoUrl: generateProductPhotoDataUrl('생크림 (개봉 시 당일포함 3일)', '우유·유제품 냉장 (0~10℃)', '#10B981', addDaysToDateStr(now, 3)),
-          lots: [
-            { id: 'lot-fc1', expiryDate: addDaysToDateStr(now, 3), qty: 5 }
-          ]
-        },
-        {
-          id: 'prod-blueberry',
-          name: '블루베리베이스 1.2kg',
-          unit: '통',
-          zone: '시럽·소스·베이스 냉장',
-          linkedPresetId: 'preset-blueberry-sub',
-          photoUrl: generateProductPhotoDataUrl('블루베리베이스 (소분 14일·당일포함)', '시럽·소스·베이스 냉장', '#4F46E5', addDaysToDateStr(now, 5)),
-          lots: [
-            { id: 'lot-b1', expiryDate: addDaysToDateStr(now, 5), qty: 2 },
-            { id: 'lot-b2', expiryDate: addDaysToDateStr(now, 16), qty: 5 }
-          ]
-        },
-        {
-          id: 'prod-pineapple',
-          name: '파인애플과육 베이스',
-          unit: '통',
-          zone: '시럽·소스·베이스 냉장',
-          linkedPresetId: 'preset-pineapple-sub',
-          photoUrl: generateProductPhotoDataUrl('파인애플과육 (소분 14일·당일포함)', '시럽·소스·베이스 냉장', '#D97706', addDaysToDateStr(now, 6)),
-          lots: [
-            { id: 'lot-p1', expiryDate: addDaysToDateStr(now, 6), qty: 3 }
-          ]
-        },
-        {
-          id: 'prod-natadecoco',
-          name: '나타드코코',
-          unit: '통',
-          zone: '커피바·파우더·실온',
-          linkedPresetId: 'preset-natadecoco',
-          photoUrl: generateProductPhotoDataUrl('나타드코코 (개봉 후 냉장 30일)', '개봉 후 냉장보관 (0~10℃)', '#0D9488', addDaysToDateStr(now, 19)),
-          lots: [
-            { id: 'lot-n1', expiryDate: addDaysToDateStr(now, 19), qty: 6 }
-          ]
-        },
-        {
-          id: 'prod-oat-milk',
-          name: '오트밀크 1L',
-          unit: '팩',
-          zone: '우유·유제품 냉장',
-          linkedPresetId: 'preset-oat-milk',
-          photoUrl: generateProductPhotoDataUrl('오트밀크 1L (개봉 시 당일포함 5일)', '우유·유제품 냉장', '#0891B2', addDaysToDateStr(now, 9)),
-          lots: [
-            { id: 'lot-o1', expiryDate: addDaysToDateStr(now, 9), qty: 10 }
-          ]
-        },
-        {
-          id: 'prod-almond-milk',
-          name: '아몬드브리즈 1L',
-          unit: '팩',
-          zone: '우유·유제품 냉장',
-          linkedPresetId: 'preset-almond-milk',
-          photoUrl: generateProductPhotoDataUrl('아몬드브리즈 1L (개봉 시 당일포함 5일)', '우유·유제품 냉장', '#0284C7', addDaysToDateStr(now, 10)),
-          lots: [
-            { id: 'lot-am1', expiryDate: addDaysToDateStr(now, 10), qty: 8 }
-          ]
-        },
-        {
-          id: 'prod-condensed',
-          name: '연유 (스위트밀크)',
-          unit: '통',
-          zone: '시럽·소스·베이스 냉장',
-          linkedPresetId: 'preset-condensed-milk-sub',
-          photoUrl: generateProductPhotoDataUrl('연유 (소분 시 당일포함 7일)', '시럽·소스·베이스 냉장', '#CA8A04', addDaysToDateStr(now, 14)),
-          lots: [
-            { id: 'lot-cm1', expiryDate: addDaysToDateStr(now, 14), qty: 7 }
-          ]
-        },
-        {
-          id: 'prod-lemon-slice',
-          name: '건조레몬슬라이스',
-          unit: '봉',
-          zone: '커피바·파우더·실온',
-          linkedPresetId: 'preset-dried-lemon',
-          photoUrl: generateProductPhotoDataUrl('건조레몬슬라이스 (소분 14일)', '커피바·파우더·실온', '#EAB308', addDaysToDateStr(now, 21)),
-          lots: [
-            { id: 'lot-dl1', expiryDate: addDaysToDateStr(now, 21), qty: 9 }
-          ]
-        },
-        {
-          id: 'prod-croque',
-          name: '크로크무슈 (냉동)',
-          unit: '개',
-          zone: '베이커리·과일 쇼케이스',
-          linkedPresetId: 'preset-bread-croque',
-          photoUrl: generateProductPhotoDataUrl('크로크무슈 (해동 후 24H/2일)', '베이커리·과일 쇼케이스', '#EA580C', addDaysToDateStr(now, 12)),
-          lots: [
-            { id: 'lot-cr1', expiryDate: addDaysToDateStr(now, 12), qty: 14 }
-          ]
-        },
-        {
-          id: 'prod-cake-cheese',
-          name: '치즈케익 (냉동)',
-          unit: '개',
-          zone: '베이커리·과일 쇼케이스',
-          linkedPresetId: 'preset-cake-cheese',
-          photoUrl: generateProductPhotoDataUrl('치즈케익 (해동 후 48H/3일)', '베이커리·과일 쇼케이스', '#9333EA', addDaysToDateStr(now, 15)),
-          lots: [
-            { id: 'lot-ck1', expiryDate: addDaysToDateStr(now, 15), qty: 9 }
-          ]
-        },
-        {
-          id: 'prod-cake-tiramisu',
-          name: '티라미수케익 (냉동)',
-          unit: '개',
-          zone: '베이커리·과일 쇼케이스',
-          linkedPresetId: 'preset-cake-tiramisu',
-          photoUrl: generateProductPhotoDataUrl('티라미수케익 (해동 후 48H/3일)', '베이커리·과일 쇼케이스', '#7E22CE', addDaysToDateStr(now, 16)),
-          lots: [
-            { id: 'lot-ti1', expiryDate: addDaysToDateStr(now, 16), qty: 11 }
-          ]
-        }
-      ],
-      deliverySlips: [
-        {
-          id: 'slip-seed-1',
-          supplier: '메가MGC커피 물류 오전 정기납품',
-          capturedAt: formatDateTime(openedTodayMorning),
-          manager: '알바 A (김민지)',
-          photoUrl: generateDeliverySlipPhotoDataUrl(
-            '메가MGC커피 물류 오전 정기납품',
-            sampleSlip1Items,
-            formatDateTime(openedTodayMorning)
-          ),
-          items: sampleSlip1Items
-        },
-        {
-          id: 'slip-seed-2',
-          supplier: '식자재 정기 물류 전표',
-          capturedAt: formatDateTime(yesterdayMorning),
-          manager: '점장 (사장님)',
-          photoUrl: generateDeliverySlipPhotoDataUrl(
-            '식자재 정기 물류 전표',
-            sampleSlip2Items,
-            formatDateTime(yesterdayMorning)
-          ),
-          items: sampleSlip2Items
-        }
-      ],
-      activeTimers: [
-        {
-          id: 'timer-closing-1',
-          code: '#L-101',
-          itemName: '일반 휘핑크림 (제조)',
-          openedAtFormatted: formatDateOnly(openedTwoDaysAgo),
-          expiresAtFormatted: `${formatDateOnly(now)} (당일포함 3일)`,
-          expiresDateStr: addDaysToDateStr(now, 0),
-          manager: '알바 B (박준호)',
-          storageMethod: '냉장 (0~10℃)',
-          isClosingTarget: true
-        },
-        {
-          id: 'timer-closing-2',
-          code: '#L-102',
-          itemName: '콜드브루 배합액 (제조)',
-          openedAtFormatted: formatDateTime(openedTodayMorning),
-          expiresAtFormatted: `${formatDateOnly(now)} (당일폐기)`,
-          expiresDateStr: addDaysToDateStr(now, 0),
-          manager: '알바 A (김민지)',
-          storageMethod: '냉장 (0~10℃)',
-          isClosingTarget: true
-        },
-        {
-          id: 'timer-active-3',
-          code: '#L-103',
-          itemName: '블루베리베이스 (소분)',
-          openedAtFormatted: formatDateOnly(now),
-          expiresAtFormatted: `${formatDateOnly(new Date(now.getTime() + 13 * 86400000))} (당일포함 14일)`,
-          expiresDateStr: addDaysToDateStr(now, 13),
-          manager: '알바 A (김민지)',
-          storageMethod: '냉장 (0~10℃)',
-          isClosingTarget: false
-        }
-      ],
+      unopenedProducts: [],
+      deliverySlips: [],
+      activeTimers: [],
       lastPrintedLabel: {
         presetId: 'preset-milk',
-        code: '#L-104',
+        code: '#L-000',
         actionType: '개봉',
         itemName: '우유 1L (개봉)',
         originalExpiryFormatted: addDaysToDateStr(now, 5).replace(/-/g, '.'),
@@ -676,6 +439,36 @@
     }
   }
 
+  // 예전 버전이 자동으로 넣어주던 데모 데이터(가짜 재고·타이머·거래명세서·절감금액)를 1회 정리
+  function stripLegacyDemoData(s) {
+    if (!s || s.demoDataCleared) return s;
+    const seededProdIds = new Set(['prod-milk', 'prod-whip', 'prod-fresh-cream', 'prod-blueberry', 'prod-pineapple', 'prod-natadecoco', 'prod-oat-milk', 'prod-almond-milk', 'prod-condensed', 'prod-lemon-slice', 'prod-croque', 'prod-cake-cheese', 'prod-cake-tiramisu']);
+    const seededLotIds = new Set(['lot-m1', 'lot-m2', 'lot-c1', 'lot-c2', 'lot-fc1', 'lot-b1', 'lot-b2', 'lot-p1', 'lot-n1', 'lot-o1', 'lot-am1', 'lot-cm1', 'lot-dl1', 'lot-cr1', 'lot-ck1', 'lot-ti1']);
+    const seededTimerIds = new Set(['timer-closing-1', 'timer-closing-2', 'timer-active-3']);
+
+    if (Array.isArray(s.receiveHistory)) {
+      s.receiveHistory = s.receiveHistory.filter((r) => !String(r.id || '').startsWith('rec-init-'));
+    }
+    if (Array.isArray(s.deliverySlips)) {
+      s.deliverySlips = s.deliverySlips.filter((d) => !String(d.id || '').startsWith('slip-seed-'));
+    }
+    if (Array.isArray(s.activeTimers)) {
+      s.activeTimers = s.activeTimers.filter((t) => !seededTimerIds.has(t.id));
+    }
+    if (Array.isArray(s.unopenedProducts)) {
+      s.unopenedProducts = s.unopenedProducts
+        .map((p) => (seededProdIds.has(p.id)
+          ? { ...p, lots: (p.lots || []).filter((l) => !seededLotIds.has(l.id)) }
+          : p))
+        .filter((p) => !(seededProdIds.has(p.id) && (!p.lots || p.lots.length === 0)));
+    }
+    if (Number(s.roiSavedKrw) >= 485000) {
+      s.roiSavedKrw = Number(s.roiSavedKrw) - 485000;
+    }
+    s.statsIncludeSample = false;
+    s.demoDataCleared = true;
+    return s;
+  }
   function loadState() {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
@@ -694,6 +487,7 @@
       }
       const parsed = JSON.parse(raw);
       if (!parsed.presets || !parsed.unopenedProducts) return createDefaultState();
+      stripLegacyDemoData(parsed);
       if (!Array.isArray(parsed.deliverySlips)) parsed.deliverySlips = [];
       if (!parsed.viewMode) parsed.viewMode = 'BY_DAYS';
       if (!parsed.ddayFilter) parsed.ddayFilter = 'ALL';
@@ -725,7 +519,7 @@
       if (!parsed.statsPeriod) parsed.statsPeriod = 'DAILY';
       if (!parsed.statsCategory) parsed.statsCategory = 'ALL';
       if (!parsed.statsItemId) parsed.statsItemId = 'ALL';
-      if (typeof parsed.statsIncludeSample !== 'boolean') parsed.statsIncludeSample = true;
+      if (typeof parsed.statsIncludeSample !== 'boolean') parsed.statsIncludeSample = false;
       if (typeof parsed.currentStaff !== 'string' || !parsed.currentStaff.trim() || parsed.currentStaff.startsWith('알바')) {
         parsed.currentStaff = '매장관리자';
       }
@@ -901,6 +695,14 @@
     if (Array.isArray(payload.useHistory)) state.useHistory = payload.useHistory;
     if (payload.favCols) state.favCols = payload.favCols;
 
+    if (!state.demoDataCleared) stripLegacyDemoData(state);
+    else {
+      // 클라우드(구글 시트)에 남아 있던 예전 데모 데이터도 제거
+      const keepFlag = state.demoDataCleared;
+      state.demoDataCleared = false;
+      stripLegacyDemoData(state);
+      state.demoDataCleared = keepFlag;
+    }
     state.lastSyncUpdatedAt = Number(remoteUpdatedAt || Date.now());
     state.lastSyncTimeStr = formatDateTime(new Date());
     saveState(true);
@@ -5740,7 +5542,7 @@
       renderAll();
       renderCurrentSticker();
       presetDialog.close();
-      showToast('메가MGC커피 안전보관일(당일포함 기준) 초기 데이터로 복원되었습니다.');
+      showToast('기본 설정으로 초기화되었습니다. (재고·타이머 기록은 비어 있는 상태)');
     });
 
     // MODAL 8: Google Sheets Personal Cloud Sync Events
