@@ -1111,18 +1111,39 @@
     return _vSig(tag) === code.slice(0, 4);
   }
 
+  function isKeyBlockedInLocalSellerLedger(enteredKey) {
+    try {
+      const raw = localStorage.getItem('freshlabel_seller_admin_ledger_v1');
+      if (!raw) return false;
+      const list = JSON.parse(raw);
+      if (!Array.isArray(list)) return false;
+      const found = list.find((item) => String(item.key || '').trim().toUpperCase() === enteredKey);
+      return Boolean(found && found.status === 'BLOCKED');
+    } catch (_) {
+      return false;
+    }
+  }
+
   async function verifyLicenseWithCheckpointServer(rawKey, silentCheck = false) {
     const entered = String(rawKey || '').trim().toUpperCase();
-    if (! verifyLicenseKey(entered)) {
+    if (!verifyLicenseKey(entered)) {
       return {
         ok: false,
         message: '⚠️ 유효하지 않은 인증코드입니다. 오타가 없는지 확인해 주세요.'
       };
     }
 
+    // 1. 동일 브라우저 판매자 장부에서 차단(BLOCKED) 상태인지 즉시 확인
+    if (isKeyBlockedInLocalSellerLedger(entered)) {
+      return {
+        ok: false,
+        blockedOrExceeded: true,
+        message: '⛔ 판매자에 의해 사용 정지(차단)된 인증코드입니다. 정식판 사용이 제한됩니다.'
+      };
+    }
+
     const checkpointUrl = getActiveCheckpointUrl();
     if (!checkpointUrl) {
-      // 검문소 URL 미지정 시 암호화 서명 검증으로 통과
       return {
         ok: true,
         usedDevices: 1,
@@ -1170,6 +1191,23 @@
         maxDevices: 3,
         message: '🎉 정식판(평생 소장권) 인증이 완료되었습니다!'
       };
+    }
+  }
+
+  async function checkAndEnforceLicenseBlock() {
+    if (!isFullLicense() || !state.licenseKey) return;
+    const res = await verifyLicenseWithCheckpointServer(state.licenseKey, true);
+    if (res && res.ok === false && res.blockedOrExceeded) {
+      state.licenseTier = 'TRIAL';
+      state.appMode = 'SIMPLE';
+      saveState();
+      renderAll();
+      const fbEl = document.getElementById('licenseActivateFeedback');
+      if (fbEl) {
+        fbEl.style.color = '#B91C1C';
+        fbEl.textContent = res.message;
+      }
+      openLicenseModal(res.message);
     }
   }
 
@@ -5708,46 +5746,46 @@
   if (state.googleSheetWebAppUrl) {
     pullStateFromGoogleSheet(true);
   }
-  // 정식판 상태일 때 판매자 구글 시트 검문소에 기기 초과·차단 여부 백그라운드 검증
-  if (isFullLicense() && state.licenseKey && getActiveCheckpointUrl()) {
-    verifyLicenseWithCheckpointServer(state.licenseKey, true).then((res) => {
-      if (res && res.ok === false && res.blockedOrExceeded) {
-        state.licenseTier = 'TRIAL';
-        state.appMode = 'SIMPLE';
-        saveState();
-        renderAll();
-        openLicenseModal(res.message);
-      }
-    });
-  }
+  checkAndEnforceLicenseBlock();
   setInterval(renderClock, 1000);
 
-  // Fast 5-second background sync + instant sync when unlocking phone or switching back to tab
+  // Fast 5-second background sync + license block enforcement
   setInterval(() => {
-    if (
-      state.googleSheetWebAppUrl &&
-      state.googleAutoSync &&
-      !googlePushDebounceTimer &&
-      document.visibilityState !== 'hidden'
-    ) {
-      pullStateFromGoogleSheet(true);
+    if (document.visibilityState !== 'hidden') {
+      checkAndEnforceLicenseBlock();
+      if (
+        state.googleSheetWebAppUrl &&
+        state.googleAutoSync &&
+        !googlePushDebounceTimer
+      ) {
+        pullStateFromGoogleSheet(true);
+      }
     }
   }, 5000);
 
   window.addEventListener('focus', () => {
+    checkAndEnforceLicenseBlock();
     if (state.googleSheetWebAppUrl && state.googleAutoSync && !googlePushDebounceTimer) {
       pullStateFromGoogleSheet(true);
     }
   });
 
   document.addEventListener('visibilitychange', () => {
-    if (
-      document.visibilityState === 'visible' &&
-      state.googleSheetWebAppUrl &&
-      state.googleAutoSync &&
-      !googlePushDebounceTimer
-    ) {
-      pullStateFromGoogleSheet(true);
+    if (document.visibilityState === 'visible') {
+      checkAndEnforceLicenseBlock();
+      if (state.googleSheetWebAppUrl && state.googleAutoSync && !googlePushDebounceTimer) {
+        pullStateFromGoogleSheet(true);
+      }
+    }
+  });
+
+  window.addEventListener('storage', (e) => {
+    if (e.key === STORAGE_KEY) {
+      state = loadState();
+      renderAll();
+      renderCurrentSticker();
+    } else if (e.key === 'freshlabel_seller_admin_ledger_v1') {
+      checkAndEnforceLicenseBlock();
     }
   });
 })();
