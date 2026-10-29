@@ -1180,7 +1180,19 @@
     return null;
   }
 
+  let _deviceWriteInFlight = 0;
   async function saveCheckpointRecordState(key, nextState) {
+    _deviceWriteInFlight += 1;
+    try {
+      return await _saveCheckpointRecordStateInner(key, nextState);
+    } finally {
+      setTimeout(() => {
+        _deviceWriteInFlight = Math.max(0, _deviceWriteInFlight - 1);
+      }, 2500);
+    }
+  }
+
+  async function _saveCheckpointRecordStateInner(key, nextState) {
     const checkpointUrl = getActiveCheckpointUrl();
     if (!checkpointUrl || !key) return false;
     const cleanKey = String(key).trim().toUpperCase();
@@ -1362,7 +1374,7 @@
 
   let _isCheckingLicenseBlock = false;
   async function checkAndEnforceLicenseBlock() {
-    if (!isFullLicense() || !state.licenseKey || _isCheckingLicenseBlock) return;
+    if (!isFullLicense() || !state.licenseKey || _isCheckingLicenseBlock || _deviceWriteInFlight > 0) return;
     _isCheckingLicenseBlock = true;
     try {
       const entered = String(state.licenseKey || '').trim().toUpperCase();
@@ -1406,7 +1418,8 @@
     refreshCustomerDeviceManagerUI();
   }
 
-  async function refreshCustomerDeviceManagerUI() {
+  let _lastDeviceUiSignature = '';
+  async function refreshCustomerDeviceManagerUI(silent = false) {
     const countBadge = document.getElementById('customerDeviceCountBadge');
     const listEl = document.getElementById('customerRegisteredDevicesList');
     const keyInput = document.getElementById('licenseKeyInput');
@@ -1415,6 +1428,7 @@
     const targetKey = String((keyInput && keyInput.value) || state.licenseKey || '').trim().toUpperCase();
     if (!targetKey || !verifyLicenseKey(targetKey)) {
       countBadge.textContent = '등록 기기: 0 / 3대';
+      _lastDeviceUiSignature = '';
       listEl.innerHTML = `
         <div style="font-size: 0.78rem; color: #64748B; font-weight: 700; padding: 8px 10px; background: #FFFFFF; border-radius: 8px; border: 1px dashed #CBD5E1;">
           위에 정식판 인증코드를 입력하면 현재 등록된 매장 기기 현황과 기기 추가/삭제 버튼이 표시됩니다.
@@ -1423,12 +1437,22 @@
       return;
     }
 
-    listEl.innerHTML = `<div style="font-size: 0.78rem; color: #2563EB; font-weight: 700; padding: 8px 10px;">🔄 등록된 기기 목록을 불러오는 중...</div>`;
+    if (!silent) {
+      _lastDeviceUiSignature = '';
+      listEl.innerHTML = `<div style="font-size: 0.78rem; color: #2563EB; font-weight: 700; padding: 8px 10px;">🔄 등록된 기기 목록을 불러오는 중...</div>`;
+    }
     const record = await fetchCheckpointRecordForKey(targetKey);
     if (!record) {
-      listEl.innerHTML = `<div style="font-size: 0.78rem; color: #64748B; font-weight: 700; padding: 8px 10px;">기기 서버에 연결할 수 없습니다.</div>`;
+      if (!silent) {
+        listEl.innerHTML = `<div style="font-size: 0.78rem; color: #64748B; font-weight: 700; padding: 8px 10px;">기기 서버에 연결할 수 없습니다.</div>`;
+      }
       return;
     }
+
+    // 실시간 자동 갱신 시 데이터가 그대로면 화면을 다시 그리지 않음 (깜빡임 방지)
+    const signature = JSON.stringify([targetKey, record.status, record.maxDevices, record.devices]);
+    if (silent && signature === _lastDeviceUiSignature) return;
+    _lastDeviceUiSignature = signature;
 
     const myDevId = getOrCreateDeviceId();
     const maxDev = record.maxDevices || 3;
@@ -6169,10 +6193,22 @@
   checkAndEnforceLicenseBlock();
   setInterval(renderClock, 1000);
 
-  // Fast 5-second background sync + license block enforcement
+  // Real-time (3-second) license / device sync + block enforcement
+  function runRealtimeLicenseSync() {
+    if (document.visibilityState === 'hidden') return;
+    checkAndEnforceLicenseBlock();
+    const dlg = document.getElementById('licenseDialog');
+    if (dlg && dlg.open) {
+      refreshCustomerDeviceManagerUI(true);
+    }
+  }
+
+  setInterval(() => {
+    runRealtimeLicenseSync();
+  }, 3000);
+
   setInterval(() => {
     if (document.visibilityState !== 'hidden') {
-      checkAndEnforceLicenseBlock();
       if (
         state.googleSheetWebAppUrl &&
         state.googleAutoSync &&
