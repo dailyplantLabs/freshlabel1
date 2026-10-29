@@ -1029,7 +1029,7 @@
   // (Google Sheet Checkpoint Server: Max 3 Devices Limit + Remote Block + Obfuscated Signature)
   // ==========================================================================
   const DEFAULT_SELLER_PURCHASE_URL = 'https://open.kakao.com/';
-  const DEFAULT_LICENSE_CHECKPOINT_URL = ''; // 판매자 전용 구글 시트 검문소 웹앱 URL (관리기 연동 시 자동 저장/호출)
+  const DEFAULT_LICENSE_CHECKPOINT_URL = 'https://script.google.com/macros/s/AKfycbz7AP1h8gLSMjoFewdvXIIY9fBJBFTZDSAV_IMOJx7l72TrKWAnHOs8Fc_JJG6ifnNL/exec'; // 판매자 전용 구글 시트 검문소 웹앱 URL
   const DEVICE_ID_STORAGE_KEY = 'freshlabel_unique_device_id_v1';
   const CHECKPOINT_URL_STORAGE_KEY = 'freshlabel_license_checkpoint_url_v1';
 
