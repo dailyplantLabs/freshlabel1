@@ -1404,7 +1404,24 @@
     }
   }
 
+  const RELEASED_KEY_STORAGE = 'freshlabel_released_license_key_v1';
+  function markLicenseKeyReleased(key) {
+    try {
+      const k = String(key || '').trim().toUpperCase();
+      if (k) localStorage.setItem(RELEASED_KEY_STORAGE, k);
+    } catch (_) {}
+  }
+  function clearLicenseKeyReleased() {
+    try { localStorage.removeItem(RELEASED_KEY_STORAGE); } catch (_) {}
+  }
+  function isLicenseKeyReleased(key) {
+    try {
+      return localStorage.getItem(RELEASED_KEY_STORAGE) === String(key || '').trim().toUpperCase();
+    } catch (_) { return false; }
+  }
+
   function enforceImmediateTrialLock(reasonMessage) {
+    markLicenseKeyReleased(state.licenseKey);
     state.licenseTier = 'TRIAL';
     state.appMode = 'SIMPLE';
     saveState();
@@ -1513,6 +1530,7 @@
         });
 
         const removedIsMe = extractDeviceIdToken(removedEntry) === myDevId;
+        if (removedIsMe) markLicenseKeyReleased(targetKey);
         if (removedIsMe && isFullLicense()) {
           state.licenseTier = 'TRIAL';
           state.appMode = 'SIMPLE';
@@ -5994,6 +6012,7 @@
           fbEl.textContent = '🔄 정품 라이선스 및 허용 기기 대수(최대 3대)를 확인 중입니다...';
         }
         btnActivateLicenseKey.disabled = true;
+        clearLicenseKeyReleased();
 
         const result = await verifyLicenseWithCheckpointServer(entered, false);
         btnActivateLicenseKey.disabled = false;
@@ -6054,6 +6073,7 @@
           });
         }
         btnResetAllCustomerDevices.disabled = false;
+        markLicenseKeyReleased(targetKey);
         state.licenseTier = 'TRIAL';
         state.appMode = 'SIMPLE';
         saveState();
@@ -6165,7 +6185,16 @@
       localStorage.setItem(CHECKPOINT_URL_STORAGE_KEY, fullChkUrl);
     }
     const lkeyParam = params.get('lkey');
-    if (lkeyParam) {
+    // 새로고침할 때마다 다시 등록되지 않도록 주소창에서 인증 파라미터 제거
+    if (lkeyParam || lchkParam) {
+      try {
+        params.delete('lkey');
+        params.delete('lchk');
+        const qs = params.toString();
+        window.history.replaceState(null, '', window.location.pathname + (qs ? '?' + qs : '') + window.location.hash);
+      } catch (_) {}
+    }
+    if (lkeyParam && !isLicenseKeyReleased(lkeyParam)) {
       const cleanKey = lkeyParam.trim().toUpperCase();
       verifyLicenseWithCheckpointServer(cleanKey, false).then((res) => {
         if (res.ok) {
