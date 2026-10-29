@@ -1115,6 +1115,14 @@
     return String(devEntry || '').trim().split(/\s+/)[0].toUpperCase();
   }
 
+  function escapeHtml(str) {
+    return String(str || '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
   function parseCheckpointRowData(remote) {
     const rawStatus = String(remote.status || 'ACTIVE').trim();
     const isBlocked = rawStatus.toUpperCase().startsWith('BLOCKED');
