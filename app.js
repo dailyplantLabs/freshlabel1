@@ -1,4 +1,4 @@
-/**
+﻿/**
  * FreshLabel — Mega MGC Coffee Safety Storage Manual (2025.01 ver) Edition
  * Core Rules Implemented:
  *  1. 당일 포함(Inclusive of Opening/Manufacturing Day) Expiry Calculation:
@@ -1464,7 +1464,7 @@
     if (devs.length === 0) {
       listEl.innerHTML = `
         <div style="font-size: 0.78rem; color: #64748B; font-weight: 700; padding: 10px 12px; background: #FFFFFF; border-radius: 8px; border: 1px dashed #CBD5E1; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
-          <span>현재 등록된 기기가 없습니다 (0/${maxDev}대). 위 [정식판 잠금 해제] 또는 아래 [➕ 새 기기 추가 등록]을 눌러 기기를 등록하세요.</span>
+          <span>현재 등록된 기기가 없습니다 (0/${maxDev}대). 위 [정식판 잠금 해제]를 눌러 이 기기를 등록하세요.</span>
         </div>
       `;
       return;
