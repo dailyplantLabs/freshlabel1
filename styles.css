@@ -3851,3 +3851,23 @@ body:has(dialog[open]) {
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+/* ==========================================================================
+   Single page scrollbar fix: only <html> scrolls (body no longer a second scroll container)
+   ========================================================================== */
+@media (max-width: 1259px) {
+  html {
+    height: 100%;
+    overflow-x: hidden;
+    overflow-y: auto;
+  }
+  body {
+    height: auto;
+    min-height: 100%;
+    overflow: visible;
+  }
+}
+html:has(dialog[open]),
+body:has(dialog[open]) {
+  overflow: hidden !important;
+}
