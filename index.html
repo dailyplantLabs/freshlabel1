@@ -1416,6 +1416,55 @@
           30,000원 정식판 구매 시 전달받은 인증코드를 입력하면 즉시 모든 기능 잠금이 해제됩니다.
         </div>
       </div>
+
+      <!-- Customer Device Management Box (등록 기기 확인 · 기기 추가 · 기기 삭제 · 초기화) -->
+      <div class="google-sync-box" id="customerDeviceManagerBox" style="border: 1.5px solid #BFDBFE; background-color: #F8FAFC; padding: 14px 16px;">
+        <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; margin-bottom: 10px;">
+          <div>
+            <div style="font-size: 0.9rem; font-weight: 900; color: #1E3A8A; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+              <span>📱 우리 매장 등록 기기 관리 (추가 · 삭제)</span>
+              <span id="customerDeviceCountBadge" style="background-color: #DBEAFE; color: #1D4ED8; padding: 2px 9px; border-radius: 999px; font-size: 0.76rem; font-weight: 900;">
+                등록 기기: 0 / 3대
+              </span>
+            </div>
+            <div style="font-size: 0.75rem; font-weight: 700; color: #475569; margin-top: 2px;" id="customerDeviceSubText">
+              인증된 코드의 등록 기기 목록을 확인하고, 새 기기(태블릿·폰·포스기)를 추가하거나 안 쓰는 기기를 삭제할 수 있습니다.
+            </div>
+          </div>
+          <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+            <button type="button" class="header-btn" id="btnRefreshCustomerDevices" style="height: 32px; padding: 0 10px; font-size: 0.75rem; font-weight: 800;">
+              🔄 기기현황 새로고침
+            </button>
+            <button type="button" class="header-btn" id="btnResetAllCustomerDevices" style="height: 32px; padding: 0 10px; font-size: 0.75rem; font-weight: 800; color: #BE123C; border-color: #FDA4AF; background-color: #FFF1F2;">
+              🗑️ 전체 기기 초기화(0대)
+            </button>
+          </div>
+        </div>
+
+        <!-- Registered Device List -->
+        <div id="customerRegisteredDevicesList" style="display: flex; flex-direction: column; gap: 6px; margin-bottom: 10px;">
+          <div style="font-size: 0.78rem; color: #64748B; font-weight: 700; padding: 8px 10px; background: #FFFFFF; border-radius: 8px; border: 1px dashed #CBD5E1;">
+            정식판 인증코드를 입력하면 등록된 기기 목록이 여기에 표시됩니다.
+          </div>
+        </div>
+
+        <!-- Add Device Form -->
+        <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 8px; padding-top: 8px; border-top: 1px solid #E2E8F0;">
+          <input
+            type="text"
+            class="form-input"
+            id="customerNewDeviceNameInput"
+            placeholder="추가할 기기 이름 입력 (예: 매장 아이패드, 직원 핸드폰, 포스기2)"
+            style="flex: 1; min-width: 200px; height: 36px; font-size: 0.8125rem; font-weight: 700;"
+          />
+          <button type="button" class="btn-add-stock" id="btnCustomerAddDevice" style="height: 36px; padding: 0 14px; font-size: 0.8rem; background-color: #2563EB; border-color: #1D4ED8;">
+            ➕ 새 기기 추가 등록
+          </button>
+          <button type="button" class="header-btn" id="btnCopyDeviceAutoAuthLink" style="height: 36px; padding: 0 12px; font-size: 0.78rem; font-weight: 800; border-color: #93C5FD; color: #1D4ED8; background-color: #EFF6FF;">
+            📲 다른 폰/태블릿 연결링크 복사
+          </button>
+        </div>
+      </div>
     </div>
 
     <div class="modal-footer">

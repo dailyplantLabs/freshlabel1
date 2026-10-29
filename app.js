@@ -1111,17 +1111,150 @@
     return _vSig(tag) === code.slice(0, 4);
   }
 
-  function isKeyBlockedInLocalSellerLedger(enteredKey) {
+  function extractDeviceIdToken(devEntry) {
+    return String(devEntry || '').trim().split(/\s+/)[0].toUpperCase();
+  }
+
+  function parseCheckpointRowData(remote) {
+    const rawStatus = String(remote.status || 'ACTIVE').trim();
+    const isBlocked = rawStatus.toUpperCase().startsWith('BLOCKED');
+    let maxDevices = Number(remote.maxDevices || 3);
+    const maxMatch = rawStatus.match(/최대(\d+)대/);
+    if (maxMatch) {
+      maxDevices = Math.max(1, Number(maxMatch[1]) || 3);
+    }
+    let devices = Array.isArray(remote.devices) ? remote.devices.map(String).filter(Boolean) : [];
+    const devSplitIdx = rawStatus.indexOf('||');
+    if (devSplitIdx !== -1) {
+      try {
+        const parsedDevs = JSON.parse(rawStatus.slice(devSplitIdx + 2));
+        if (Array.isArray(parsedDevs)) {
+          devices = parsedDevs.map(String).filter(Boolean);
+        }
+      } catch (_) {}
+    }
+    return {
+      dateDisplay: String(remote.dateDisplay || ''),
+      storeName: String(remote.storeName || '매장'),
+      key: String(remote.key || '').trim().toUpperCase(),
+      status: isBlocked ? 'BLOCKED' : 'ACTIVE',
+      maxDevices,
+      devices,
+      usedDevices: devices.length,
+      contact: String(remote.contact || ''),
+      channel: String(remote.channel || ''),
+      price: Number(remote.price || 30000),
+      memo: String(remote.memo || '')
+    };
+  }
+
+  async function fetchCheckpointRecordForKey(rawKey) {
+    const entered = String(rawKey || '').trim().toUpperCase();
+    const checkpointUrl = getActiveCheckpointUrl();
+    if (!entered || !checkpointUrl) return null;
     try {
-      const raw = localStorage.getItem('freshlabel_seller_admin_ledger_v1');
-      if (!raw) return false;
-      const list = JSON.parse(raw);
-      if (!Array.isArray(list)) return false;
-      const found = list.find((item) => String(item.key || '').trim().toUpperCase() === enteredKey);
-      return Boolean(found && found.status === 'BLOCKED');
+      const res = await fetch(`${checkpointUrl}${checkpointUrl.includes('?') ? '&' : '?'}_t=${Date.now()}`);
+      const data = await res.json();
+      if (data && data.ok && Array.isArray(data.list)) {
+        const found = data.list.find((r) => String(r.key || '').trim().toUpperCase() === entered);
+        if (found) return parseCheckpointRowData(found);
+        return {
+          exists: false,
+          key: entered,
+          storeName: entered.split('-')[1] || '매장',
+          status: 'ACTIVE',
+          maxDevices: 3,
+          devices: [],
+          usedDevices: 0
+        };
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  async function saveCheckpointRecordState(key, nextState) {
+    const checkpointUrl = getActiveCheckpointUrl();
+    if (!checkpointUrl || !key) return false;
+    const cleanKey = String(key).trim().toUpperCase();
+    const maxDev = Math.max(1, Number(nextState.maxDevices || 3));
+    const devs = Array.isArray(nextState.devices) ? nextState.devices.map(String).filter(Boolean) : [];
+    const isBlocked = nextState.status === 'BLOCKED';
+
+    try {
+      const postCmd = (bodyObj) =>
+        fetch(checkpointUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify(bodyObj)
+        }).then((r) => r.json()).catch(() => null);
+
+      await postCmd({
+        action: 'issueLicense',
+        dateDisplay: nextState.dateDisplay || new Date().toLocaleString(),
+        storeName: nextState.storeName || cleanKey.split('-')[1] || '매장',
+        key: cleanKey,
+        contact: nextState.contact || '',
+        channel: nextState.channel || '자동등록',
+        price: nextState.price || 30000,
+        memo: nextState.memo || ''
+      });
+
+      await postCmd({ action: 'resetDevices', key: cleanKey });
+      const sheetDevs = devs.slice(0, 3);
+      for (const d of sheetDevs) {
+        await postCmd({ action: 'verifyLicense', key: cleanKey, deviceId: d });
+      }
+
+      const encodedStatus = isBlocked
+        ? 'BLOCKED'
+        : `ACTIVE (최대${maxDev}대)||${JSON.stringify(devs)}`;
+
+      await postCmd({
+        action: 'setStatus',
+        key: cleanKey,
+        storeName: nextState.storeName || cleanKey.split('-')[1] || '매장',
+        status: encodedStatus
+      });
+
+      // 동일 PC 로컬 판매자 장부에도 즉시 동기화
+      try {
+        const rawLedger = localStorage.getItem('freshlabel_seller_admin_ledger_v1');
+        if (rawLedger) {
+          const list = JSON.parse(rawLedger);
+          if (Array.isArray(list)) {
+            const item = list.find((x) => String(x.key || '').trim().toUpperCase() === cleanKey);
+            if (item) {
+              item.status = isBlocked ? 'BLOCKED' : 'ACTIVE';
+              item.maxDevices = maxDev;
+              item.devices = devs;
+              item.usedDevices = devs.length;
+              localStorage.setItem('freshlabel_seller_admin_ledger_v1', JSON.stringify(list));
+            }
+          }
+        }
+      } catch (_) {}
+
+      return true;
     } catch (_) {
       return false;
     }
+  }
+
+  function getLocalSellerLedgerItem(enteredKey) {
+    try {
+      const raw = localStorage.getItem('freshlabel_seller_admin_ledger_v1');
+      if (!raw) return null;
+      const list = JSON.parse(raw);
+      if (!Array.isArray(list)) return null;
+      return list.find((item) => String(item.key || '').trim().toUpperCase() === enteredKey) || null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  function isKeyBlockedInLocalSellerLedger(enteredKey) {
+    const found = getLocalSellerLedgerItem(enteredKey);
+    return Boolean(found && found.status === 'BLOCKED');
   }
 
   async function verifyLicenseWithCheckpointServer(rawKey, silentCheck = false) {
@@ -1153,33 +1286,58 @@
     }
 
     try {
-      const payload = {
-        action: 'verifyLicense',
-        key: entered,
-        deviceId: getOrCreateDeviceId(),
-        deviceType: getDeviceSummaryLabel(),
-        timestamp: new Date().toISOString()
-      };
-      const res = await fetch(checkpointUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify(payload)
-      });
-      const data = await res.json();
-      if (data && data.ok === false) {
+      const myDevId = getOrCreateDeviceId();
+      const myDevLabel = `${myDevId} (${getDeviceSummaryLabel()})`;
+      const record = await fetchCheckpointRecordForKey(entered);
+
+      if (record) {
+        if (record.status === 'BLOCKED') {
+          return {
+            ok: false,
+            blockedOrExceeded: true,
+            message: '⛔ 판매자에 의해 사용 정지(환불 또는 부정공유 차단)된 인증코드입니다.'
+          };
+        }
+
+        const localItem = getLocalSellerLedgerItem(entered);
+        const maxDev = localItem && localItem.maxDevices ? Number(localItem.maxDevices) : record.maxDevices;
+        const devs = Array.isArray(record.devices) ? [...record.devices] : [];
+        const existingIdx = devs.findIndex((d) => extractDeviceIdToken(d) === myDevId);
+
+        if (existingIdx === -1) {
+          if (devs.length >= maxDev) {
+            return {
+              ok: false,
+              blockedOrExceeded: true,
+              usedDevices: devs.length,
+              maxDevices: maxDev,
+              devices: devs,
+              message: `⛔ 허용된 최대 기기 대수(${maxDev}대)를 초과하여 차단되었습니다! 아래 [우리 매장 등록 기기 관리]에서 안 쓰는 기기를 삭제하거나 판매자에게 기기 추가를 요청해 주세요.`
+            };
+          }
+          devs.push(myDevLabel);
+          await saveCheckpointRecordState(entered, {
+            ...record,
+            maxDevices: maxDev,
+            devices: devs,
+            status: 'ACTIVE'
+          });
+        }
+
         return {
-          ok: false,
-          blockedOrExceeded: true,
-          message: data.message || '⛔ 허용된 기기 대수(최대 3대)를 초과했거나 사용 정지된 인증코드입니다.'
+          ok: true,
+          usedDevices: devs.length,
+          maxDevices: maxDev,
+          devices: devs,
+          message: `🎉 정식판 정품 인증 완료! (등록 기기: ${devs.length}/${maxDev}대)`
         };
       }
+
       return {
         ok: true,
-        usedDevices: data.usedDevices || 1,
-        maxDevices: data.maxDevices || 3,
-        message:
-          data.message ||
-          `🎉 정식판 정품 인증 완료! (등록 기기: ${data.usedDevices || 1}/${data.maxDevices || 3}대)`
+        usedDevices: 1,
+        maxDevices: 3,
+        message: '🎉 정식판(평생 소장권) 인증이 완료되었습니다!'
       };
     } catch (_err) {
       if (silentCheck) {
@@ -1194,21 +1352,149 @@
     }
   }
 
+  let _isCheckingLicenseBlock = false;
   async function checkAndEnforceLicenseBlock() {
-    if (!isFullLicense() || !state.licenseKey) return;
-    const res = await verifyLicenseWithCheckpointServer(state.licenseKey, true);
-    if (res && res.ok === false && res.blockedOrExceeded) {
-      state.licenseTier = 'TRIAL';
-      state.appMode = 'SIMPLE';
-      saveState();
-      renderAll();
-      const fbEl = document.getElementById('licenseActivateFeedback');
-      if (fbEl) {
-        fbEl.style.color = '#B91C1C';
-        fbEl.textContent = res.message;
+    if (!isFullLicense() || !state.licenseKey || _isCheckingLicenseBlock) return;
+    _isCheckingLicenseBlock = true;
+    try {
+      const entered = String(state.licenseKey || '').trim().toUpperCase();
+      if (isKeyBlockedInLocalSellerLedger(entered)) {
+        enforceImmediateTrialLock('⛔ 판매자에 의해 사용 정지(차단)된 인증코드입니다. 정식판 사용이 제한됩니다.');
+        return;
       }
-      openLicenseModal(res.message);
+      const record = await fetchCheckpointRecordForKey(entered);
+      if (!record) return;
+
+      if (record.status === 'BLOCKED') {
+        enforceImmediateTrialLock('⛔ 판매자에 의해 사용 정지(환불 또는 부정공유 차단)된 인증코드입니다.');
+        return;
+      }
+
+      // 관리자가 [기기초기화]를 눌렀거나 이 기기가 등록 목록에서 삭제된 경우 즉시 체험판으로 전환 (자동 재등록 방지!)
+      if (record.exists !== false) {
+        const myDevId = getOrCreateDeviceId();
+        const stillRegistered = record.devices.some((d) => extractDeviceIdToken(d) === myDevId);
+        if (!stillRegistered) {
+          enforceImmediateTrialLock('🔄 기기 등록이 초기화되었거나 현재 기기가 등록 해제되어 무료 체험판으로 전환되었습니다. 다시 사용하시려면 [정식판 잠금 해제]를 눌러주세요.');
+          return;
+        }
+      }
+    } finally {
+      _isCheckingLicenseBlock = false;
     }
+  }
+
+  function enforceImmediateTrialLock(reasonMessage) {
+    state.licenseTier = 'TRIAL';
+    state.appMode = 'SIMPLE';
+    saveState();
+    renderAll();
+    const fbEl = document.getElementById('licenseActivateFeedback');
+    if (fbEl) {
+      fbEl.style.color = '#B91C1C';
+      fbEl.textContent = reasonMessage;
+    }
+    openLicenseModal(reasonMessage);
+    refreshCustomerDeviceManagerUI();
+  }
+
+  async function refreshCustomerDeviceManagerUI() {
+    const countBadge = document.getElementById('customerDeviceCountBadge');
+    const listEl = document.getElementById('customerRegisteredDevicesList');
+    const keyInput = document.getElementById('licenseKeyInput');
+    if (!listEl || !countBadge) return;
+
+    const targetKey = String((keyInput && keyInput.value) || state.licenseKey || '').trim().toUpperCase();
+    if (!targetKey || !verifyLicenseKey(targetKey)) {
+      countBadge.textContent = '등록 기기: 0 / 3대';
+      listEl.innerHTML = `
+        <div style="font-size: 0.78rem; color: #64748B; font-weight: 700; padding: 8px 10px; background: #FFFFFF; border-radius: 8px; border: 1px dashed #CBD5E1;">
+          위에 정식판 인증코드를 입력하면 현재 등록된 매장 기기 현황과 기기 추가/삭제 버튼이 표시됩니다.
+        </div>
+      `;
+      return;
+    }
+
+    listEl.innerHTML = `<div style="font-size: 0.78rem; color: #2563EB; font-weight: 700; padding: 8px 10px;">🔄 등록된 기기 목록을 불러오는 중...</div>`;
+    const record = await fetchCheckpointRecordForKey(targetKey);
+    if (!record) {
+      listEl.innerHTML = `<div style="font-size: 0.78rem; color: #64748B; font-weight: 700; padding: 8px 10px;">기기 서버에 연결할 수 없습니다.</div>`;
+      return;
+    }
+
+    const myDevId = getOrCreateDeviceId();
+    const maxDev = record.maxDevices || 3;
+    const devs = Array.isArray(record.devices) ? record.devices : [];
+    countBadge.textContent = `등록 기기: ${devs.length} / ${maxDev}대 (여유 ${Math.max(0, maxDev - devs.length)}대)`;
+    countBadge.style.backgroundColor = devs.length >= maxDev ? '#FFE4E6' : '#DBEAFE';
+    countBadge.style.color = devs.length >= maxDev ? '#BE123C' : '#1D4ED8';
+
+    if (devs.length === 0) {
+      listEl.innerHTML = `
+        <div style="font-size: 0.78rem; color: #64748B; font-weight: 700; padding: 10px 12px; background: #FFFFFF; border-radius: 8px; border: 1px dashed #CBD5E1; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
+          <span>현재 등록된 기기가 없습니다 (0/${maxDev}대). 위 [정식판 잠금 해제] 또는 아래 [➕ 새 기기 추가 등록]을 눌러 기기를 등록하세요.</span>
+        </div>
+      `;
+      return;
+    }
+
+    listEl.innerHTML = devs
+      .map((devStr, idx) => {
+        const token = extractDeviceIdToken(devStr);
+        const isMe = token === myDevId;
+        return `
+          <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; padding: 8px 12px; background: #FFFFFF; border-radius: 8px; border: 1.5px solid ${isMe ? '#93C5FD' : '#E2E8F0'};">
+            <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+              <span style="background: ${isMe ? '#2563EB' : '#64748B'}; color: #FFFFFF; font-size: 0.7rem; font-weight: 900; padding: 2px 7px; border-radius: 6px;">
+                기기 ${idx + 1}
+              </span>
+              <span style="font-size: 0.82rem; font-weight: 800; color: #0F172A;">
+                ${escapeHtml(devStr)}
+              </span>
+              ${isMe ? `<span style="font-size: 0.72rem; font-weight: 900; color: #1D4ED8; background: #EFF6FF; padding: 2px 6px; border-radius: 5px;">💻 현재 접속 기기</span>` : ''}
+            </div>
+            <button
+              type="button"
+              class="header-btn"
+              data-remove-cust-dev-idx="${idx}"
+              style="height: 28px; padding: 0 10px; font-size: 0.74rem; font-weight: 800; color: #E11D48; border-color: #FECDD3; background: #FFF1F2;"
+            >
+              🗑️ 기기 삭제
+            </button>
+          </div>
+        `;
+      })
+      .join('');
+
+    listEl.querySelectorAll('[data-remove-cust-dev-idx]').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const removeIdx = Number(btn.getAttribute('data-remove-cust-dev-idx'));
+        const removedEntry = devs[removeIdx];
+        if (!removedEntry) return;
+        btn.disabled = true;
+        btn.textContent = '삭제 중...';
+
+        const nextDevs = devs.filter((_, i) => i !== removeIdx);
+        await saveCheckpointRecordState(targetKey, {
+          ...record,
+          devices: nextDevs
+        });
+
+        const removedIsMe = extractDeviceIdToken(removedEntry) === myDevId;
+        if (removedIsMe && isFullLicense()) {
+          state.licenseTier = 'TRIAL';
+          state.appMode = 'SIMPLE';
+          saveState();
+          renderAll();
+          const fbEl = document.getElementById('licenseActivateFeedback');
+          if (fbEl) {
+            fbEl.style.color = '#D97706';
+            fbEl.textContent = `🔓 현재 기기(${removedEntry})가 등록 해제되어 체험판으로 전환되었습니다.`;
+          }
+        }
+        await refreshCustomerDeviceManagerUI();
+      });
+    });
   }
 
   function renderLicenseStatus() {
@@ -1261,6 +1547,7 @@
     if (dialog) {
       dialog.showModal();
     }
+    refreshCustomerDeviceManagerUI();
   }
 
   function showToast(_message) {
@@ -5690,6 +5977,7 @@
             fbEl.style.color = '#059669';
             fbEl.textContent = result.message;
           }
+          refreshCustomerDeviceManagerUI();
         } else {
           if (result.blockedOrExceeded) {
             state.licenseTier = 'TRIAL';
@@ -5700,6 +5988,130 @@
             fbEl.style.color = '#B91C1C';
             fbEl.textContent = result.message;
           }
+          refreshCustomerDeviceManagerUI();
+        }
+      });
+    }
+
+    const btnRefreshCustomerDevices = document.getElementById('btnRefreshCustomerDevices');
+    if (btnRefreshCustomerDevices) {
+      btnRefreshCustomerDevices.addEventListener('click', () => {
+        refreshCustomerDeviceManagerUI();
+      });
+    }
+
+    const btnResetAllCustomerDevices = document.getElementById('btnResetAllCustomerDevices');
+    if (btnResetAllCustomerDevices) {
+      btnResetAllCustomerDevices.addEventListener('click', async () => {
+        const keyInput = document.getElementById('licenseKeyInput');
+        const targetKey = String((keyInput && keyInput.value) || state.licenseKey || '').trim().toUpperCase();
+        const fbEl = document.getElementById('licenseActivateFeedback');
+        if (!targetKey || !verifyLicenseKey(targetKey)) {
+          if (fbEl) {
+            fbEl.style.color = '#B91C1C';
+            fbEl.textContent = '⚠️ 먼저 유효한 정식판 인증코드를 입력해 주세요.';
+          }
+          return;
+        }
+        btnResetAllCustomerDevices.disabled = true;
+        const record = await fetchCheckpointRecordForKey(targetKey);
+        if (record) {
+          await saveCheckpointRecordState(targetKey, {
+            ...record,
+            devices: []
+          });
+        }
+        btnResetAllCustomerDevices.disabled = false;
+        state.licenseTier = 'TRIAL';
+        state.appMode = 'SIMPLE';
+        saveState();
+        renderAll();
+        if (fbEl) {
+          fbEl.style.color = '#059669';
+          fbEl.textContent = `🔄 등록된 모든 기기가 0대로 초기화되었습니다! 다시 사용하시려면 [정식판 잠금 해제]를 눌러주세요.`;
+        }
+        await refreshCustomerDeviceManagerUI();
+      });
+    }
+
+    const btnCustomerAddDevice = document.getElementById('btnCustomerAddDevice');
+    if (btnCustomerAddDevice) {
+      btnCustomerAddDevice.addEventListener('click', async () => {
+        const keyInput = document.getElementById('licenseKeyInput');
+        const nameInput = document.getElementById('customerNewDeviceNameInput');
+        const fbEl = document.getElementById('licenseActivateFeedback');
+        const targetKey = String((keyInput && keyInput.value) || state.licenseKey || '').trim().toUpperCase();
+        if (!targetKey || !verifyLicenseKey(targetKey)) {
+          if (fbEl) {
+            fbEl.style.color = '#B91C1C';
+            fbEl.textContent = '⚠️ 먼저 위에 유효한 정식판 인증코드를 입력해 주세요.';
+          }
+          return;
+        }
+        const customName = String((nameInput && nameInput.value) || '').trim() || '추가 매장기기';
+        btnCustomerAddDevice.disabled = true;
+        const record = await fetchCheckpointRecordForKey(targetKey);
+        if (!record) {
+          btnCustomerAddDevice.disabled = false;
+          return;
+        }
+        if (record.status === 'BLOCKED') {
+          btnCustomerAddDevice.disabled = false;
+          if (fbEl) {
+            fbEl.style.color = '#B91C1C';
+            fbEl.textContent = '⛔ 사용 차단된 인증코드이므로 기기를 추가할 수 없습니다.';
+          }
+          return;
+        }
+        const maxDev = record.maxDevices || 3;
+        const devs = Array.isArray(record.devices) ? [...record.devices] : [];
+        if (devs.length >= maxDev) {
+          btnCustomerAddDevice.disabled = false;
+          if (fbEl) {
+            fbEl.style.color = '#B91C1C';
+            fbEl.textContent = `⛔ 허용된 최대 기기 대수(${maxDev}대)가 모두 찼습니다! 기존 기기를 [🗑️ 기기 삭제]하거나 판매자에게 기기 대수 추가를 요청해 주세요.`;
+          }
+          return;
+        }
+        const newId = `DEV-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
+        devs.push(`${newId} (${customName})`);
+        await saveCheckpointRecordState(targetKey, {
+          ...record,
+          devices: devs
+        });
+        if (nameInput) nameInput.value = '';
+        btnCustomerAddDevice.disabled = false;
+        if (fbEl) {
+          fbEl.style.color = '#059669';
+          fbEl.textContent = `✅ [${customName}] 기기가 추가 등록되었습니다! (현재 ${devs.length}/${maxDev}대)`;
+        }
+        await refreshCustomerDeviceManagerUI();
+      });
+    }
+
+    const btnCopyDeviceAutoAuthLink = document.getElementById('btnCopyDeviceAutoAuthLink');
+    if (btnCopyDeviceAutoAuthLink) {
+      btnCopyDeviceAutoAuthLink.addEventListener('click', () => {
+        const keyInput = document.getElementById('licenseKeyInput');
+        const fbEl = document.getElementById('licenseActivateFeedback');
+        const targetKey = String((keyInput && keyInput.value) || state.licenseKey || '').trim().toUpperCase();
+        if (!targetKey || !verifyLicenseKey(targetKey)) {
+          if (fbEl) {
+            fbEl.style.color = '#B91C1C';
+            fbEl.textContent = '⚠️ 먼저 유효한 정식판 인증코드를 입력해 주세요.';
+          }
+          return;
+        }
+        const base = window.location.origin && window.location.origin !== 'null'
+          ? `${window.location.origin}${window.location.pathname}`
+          : 'https://dailyplantlabs.github.io/freshlabel1/';
+        const link = `${base}?lkey=${encodeURIComponent(targetKey)}`;
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(link).catch(() => {});
+        }
+        if (fbEl) {
+          fbEl.style.color = '#2563EB';
+          fbEl.textContent = `📲 다른 기기(태블릿·폰) 자동연결 링크가 복사되었습니다! 카톡으로 보내 클릭하면 즉시 등록됩니다.`;
         }
       });
     }
