@@ -1025,10 +1025,13 @@
   }
 
   // ==========================================================================
-  // Trial vs 30,000 KRW Lifetime Full Version License System (Serverless)
+  // Trial vs 30,000 KRW Lifetime Full Version License System
+  // (Google Sheet Checkpoint Server: Max 3 Devices Limit + Remote Block + Obfuscated Signature)
   // ==========================================================================
-  // 판매자 구매 문의 기본 링크 (카카오톡 오픈채팅방 주소 또는 스마트스토어/크몽 주소로 변경 가능)
   const DEFAULT_SELLER_PURCHASE_URL = 'https://open.kakao.com/';
+  const DEFAULT_LICENSE_CHECKPOINT_URL = ''; // 판매자 전용 구글 시트 검문소 웹앱 URL (관리기 연동 시 자동 저장/호출)
+  const DEVICE_ID_STORAGE_KEY = 'freshlabel_unique_device_id_v1';
+  const CHECKPOINT_URL_STORAGE_KEY = 'freshlabel_license_checkpoint_url_v1';
 
   // 무료 체험판에서 바로 출력 테스트 가능한 대표 샘플 6종 (분류별 핵심 품목)
   const TRIAL_ALLOWED_PRESET_IDS = new Set([
@@ -1039,6 +1042,36 @@
     'preset-boiled-pearl',         // 5. 펄·과일·커피: 삶은 타피오카펄 (4시간 타이머)
     'preset-cake-cheese'           // 6. 베이커리·케익: 치즈케익 (해동 3일)
   ]);
+
+  function getOrCreateDeviceId() {
+    try {
+      let devId = localStorage.getItem(DEVICE_ID_STORAGE_KEY);
+      if (!devId) {
+        const rand = Math.random().toString(36).slice(2, 8).toUpperCase();
+        const ts = Date.now().toString(36).slice(-5).toUpperCase();
+        devId = `DEV-${ts}-${rand}`;
+        localStorage.setItem(DEVICE_ID_STORAGE_KEY, devId);
+      }
+      return devId;
+    } catch (_) {
+      return 'DEV-LOCAL-01';
+    }
+  }
+
+  function getDeviceSummaryLabel() {
+    const ua = navigator.userAgent || '';
+    if (/iPad|Tablet/i.test(ua)) return '태블릿';
+    if (/iPhone|Android|Mobile/i.test(ua)) return '스마트폰';
+    return 'PC/포스기';
+  }
+
+  function getActiveCheckpointUrl() {
+    try {
+      const saved = (localStorage.getItem(CHECKPOINT_URL_STORAGE_KEY) || '').trim();
+      if (saved && saved.startsWith('http')) return saved;
+    } catch (_) {}
+    return DEFAULT_LICENSE_CHECKPOINT_URL;
+  }
 
   function isFullLicense() {
     return state.licenseTier === 'FULL';
@@ -1054,14 +1087,17 @@
     return idx >= 0 && idx < 6;
   }
 
-  function computeLicenseChecksum(tagStr) {
-    const clean = String(tagStr || 'STORE').trim().toUpperCase().replace(/[^A-Z0-9가-힣]/g, '') || 'STORE';
-    const secret = `FL30_LIFETIME_30000_${clean}_2026`;
-    let hash = 5381;
-    for (let i = 0; i < secret.length; i += 1) {
-      hash = (hash * 33) ^ secret.charCodeAt(i);
+  // Obfuscated multi-round signature check (F12 평문 노출 방지용 바이트 배열 연산)
+  function _vSig(tStr) {
+    const c = String(tStr || '\x53\x54\x4F\x52\x45').trim().toUpperCase().replace(/[^A-Z0-9가-힣]/g, '') || '\x53\x54\x4F\x52\x45';
+    const _k = [70, 76, 51, 48, 95, 76, 73, 70, 69, 84, 73, 77, 69, 95, 51, 48, 48, 48, 48, 95];
+    const _s = [95, 50, 48, 50, 54];
+    const p = _k.map((x) => String.fromCharCode(x)).join('') + c + _s.map((x) => String.fromCharCode(x)).join('');
+    let h = (0x1505 ^ 0x00) >>> 0;
+    for (let i = 0; i < p.length; i += 1) {
+      h = (Math.imul(h, 33) ^ p.charCodeAt(i)) >>> 0;
     }
-    return Math.abs(hash >>> 0).toString(16).toUpperCase().slice(0, 4).padStart(4, '0');
+    return Math.abs(h >>> 0).toString(16).toUpperCase().slice(0, 4).padStart(4, '0');
   }
 
   function verifyLicenseKey(rawKey) {
@@ -1072,7 +1108,69 @@
     const tag = parts[1];
     const code = parts[2];
     if (!tag || !code) return false;
-    return computeLicenseChecksum(tag) === code;
+    return _vSig(tag) === code.slice(0, 4);
+  }
+
+  async function verifyLicenseWithCheckpointServer(rawKey, silentCheck = false) {
+    const entered = String(rawKey || '').trim().toUpperCase();
+    if (! verifyLicenseKey(entered)) {
+      return {
+        ok: false,
+        message: '⚠️ 유효하지 않은 인증코드입니다. 오타가 없는지 확인해 주세요.'
+      };
+    }
+
+    const checkpointUrl = getActiveCheckpointUrl();
+    if (!checkpointUrl) {
+      // 검문소 URL 미지정 시 암호화 서명 검증으로 통과
+      return {
+        ok: true,
+        usedDevices: 1,
+        maxDevices: 3,
+        message: '🎉 정식판(평생 소장권) 인증이 완료되었습니다! 모든 기능이 잠금 해제되었습니다.'
+      };
+    }
+
+    try {
+      const payload = {
+        action: 'verifyLicense',
+        key: entered,
+        deviceId: getOrCreateDeviceId(),
+        deviceType: getDeviceSummaryLabel(),
+        timestamp: new Date().toISOString()
+      };
+      const res = await fetch(checkpointUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      if (data && data.ok === false) {
+        return {
+          ok: false,
+          blockedOrExceeded: true,
+          message: data.message || '⛔ 허용된 기기 대수(최대 3대)를 초과했거나 사용 정지된 인증코드입니다.'
+        };
+      }
+      return {
+        ok: true,
+        usedDevices: data.usedDevices || 1,
+        maxDevices: data.maxDevices || 3,
+        message:
+          data.message ||
+          `🎉 정식판 정품 인증 완료! (등록 기기: ${data.usedDevices || 1}/${data.maxDevices || 3}대)`
+      };
+    } catch (_err) {
+      if (silentCheck) {
+        return { ok: true };
+      }
+      return {
+        ok: true,
+        usedDevices: 1,
+        maxDevices: 3,
+        message: '🎉 정식판(평생 소장권) 인증이 완료되었습니다!'
+      };
+    }
   }
 
   function renderLicenseStatus() {
@@ -5521,7 +5619,7 @@
 
     const btnActivateLicenseKey = document.getElementById('btnActivateLicenseKey');
     if (btnActivateLicenseKey) {
-      btnActivateLicenseKey.addEventListener('click', () => {
+      btnActivateLicenseKey.addEventListener('click', async () => {
         const keyInput = document.getElementById('licenseKeyInput');
         const fbEl = document.getElementById('licenseActivateFeedback');
         const entered = (keyInput && keyInput.value ? keyInput.value : '').trim().toUpperCase();
@@ -5534,7 +5632,16 @@
           return;
         }
 
-        if (verifyLicenseKey(entered)) {
+        if (fbEl) {
+          fbEl.style.color = '#2563EB';
+          fbEl.textContent = '🔄 정품 라이선스 및 허용 기기 대수(최대 3대)를 확인 중입니다...';
+        }
+        btnActivateLicenseKey.disabled = true;
+
+        const result = await verifyLicenseWithCheckpointServer(entered, false);
+        btnActivateLicenseKey.disabled = false;
+
+        if (result.ok) {
           state.licenseTier = 'FULL';
           state.licenseKey = entered;
           saveState();
@@ -5543,25 +5650,49 @@
           if (alertBox) alertBox.style.display = 'none';
           if (fbEl) {
             fbEl.style.color = '#059669';
-            fbEl.textContent = '🎉 정식판(평생 소장권) 인증이 완료되었습니다! 모든 품목과 재고 차감·구글 시트 연동이 잠금 해제되었습니다.';
+            fbEl.textContent = result.message;
           }
         } else {
+          if (result.blockedOrExceeded) {
+            state.licenseTier = 'TRIAL';
+            saveState();
+            renderAll();
+          }
           if (fbEl) {
             fbEl.style.color = '#B91C1C';
-            fbEl.textContent = '⚠️ 유효하지 않은 인증코드입니다. 오타가 없는지 확인해 주세요.';
+            fbEl.textContent = result.message;
           }
         }
       });
     }
   }
 
-  // Auto-connect if opened with ?gsync= URL parameter on another smartphone
+  // Auto-connect if opened with ?gsync=, ?lchk= (검문소 URL), or ?lkey= (자동 정품인증) parameters
   try {
     const params = new URLSearchParams(window.location.search);
     const gsyncParam = params.get('gsync');
     if (gsyncParam && gsyncParam.startsWith('http')) {
       state.googleSheetWebAppUrl = gsyncParam.trim();
       saveState(true);
+    }
+    const lchkParam = params.get('lchk');
+    if (lchkParam) {
+      const fullChkUrl = lchkParam.startsWith('http')
+        ? lchkParam.trim()
+        : `https://script.google.com/macros/s/${lchkParam.trim()}/exec`;
+      localStorage.setItem(CHECKPOINT_URL_STORAGE_KEY, fullChkUrl);
+    }
+    const lkeyParam = params.get('lkey');
+    if (lkeyParam) {
+      const cleanKey = lkeyParam.trim().toUpperCase();
+      verifyLicenseWithCheckpointServer(cleanKey, false).then((res) => {
+        if (res.ok) {
+          state.licenseTier = 'FULL';
+          state.licenseKey = cleanKey;
+          saveState();
+          renderAll();
+        }
+      });
     }
   } catch (_) {}
 
@@ -5576,6 +5707,18 @@
   attachEvents();
   if (state.googleSheetWebAppUrl) {
     pullStateFromGoogleSheet(true);
+  }
+  // 정식판 상태일 때 판매자 구글 시트 검문소에 기기 초과·차단 여부 백그라운드 검증
+  if (isFullLicense() && state.licenseKey && getActiveCheckpointUrl()) {
+    verifyLicenseWithCheckpointServer(state.licenseKey, true).then((res) => {
+      if (res && res.ok === false && res.blockedOrExceeded) {
+        state.licenseTier = 'TRIAL';
+        state.appMode = 'SIMPLE';
+        saveState();
+        renderAll();
+        openLicenseModal(res.message);
+      }
+    });
   }
   setInterval(renderClock, 1000);
 
