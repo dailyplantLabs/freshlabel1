@@ -1,8 +1,9 @@
-const CACHE_NAME = 'freshlabel-v3';
+﻿const CACHE_NAME = 'freshlabel-v4';
 const ASSETS = [
   './index.html',
   './styles.css',
   './printer.js',
+  './qrcode.js',
   './app.js',
   './manifest.json'
 ];

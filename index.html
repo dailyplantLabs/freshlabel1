@@ -7,7 +7,7 @@
   <title>FreshLabel — 미개봉 선입선출 &amp; 소분 라벨 원터치 관리</title>
   <link rel="manifest" href="./manifest.json" />
   <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
-  <link rel="stylesheet" href="./styles.css?v=20261029_9" />
+  <link rel="stylesheet" href="./styles.css?v=20261029_10" />
 </head>
 <body>
   <div class="app-shell" data-app-mode="SIMPLE">
@@ -1451,12 +1451,32 @@
             정식판 인증코드를 입력하면 등록된 기기 목록이 여기에 표시됩니다.
           </div>
         </div>
-
-        <!-- Add Device Form -->
-        <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 8px; padding-top: 8px; border-top: 1px solid #E2E8F0;">
-          <button type="button" class="header-btn" id="btnCopyDeviceAutoAuthLink" style="height: 36px; padding: 0 12px; font-size: 0.78rem; font-weight: 800; border-color: #93C5FD; color: #1D4ED8; background-color: #EFF6FF;">
-            📲 다른 폰/태블릿 연결링크 복사
-          </button>
+        <!-- 다른 폰/태블릿 간편 연결 (QR · 링크 · 공유) -->
+        <div id="deviceConnectBox" style="padding-top: 10px; border-top: 1px solid #E2E8F0; display: flex; flex-direction: column; gap: 8px;">
+          <div style="font-size: 0.8125rem; font-weight: 900; color: #1E3A8A;">📲 다른 폰·태블릿 간편 연결</div>
+          <div style="font-size: 0.75rem; font-weight: 700; color: #475569;">
+            새 기기에서 카메라로 QR을 스캔하거나 링크를 열면 인증코드 입력 없이 바로 연결됩니다.
+          </div>
+          <label id="deviceConnectSyncRow" style="display: none; align-items: center; gap: 6px; font-size: 0.78rem; font-weight: 800; color: #0F172A;">
+            <input type="checkbox" id="chkConnectIncludeSheet" checked style="width: 16px; height: 16px; accent-color: #2563EB;" />
+            <span>내 구글 시트 실시간 연동도 함께 연결</span>
+          </label>
+          <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 8px;">
+            <button type="button" class="btn-add-stock" id="btnShowConnectQr" style="height: 38px; padding: 0 14px; font-size: 0.8rem; background-color: #2563EB; border-color: #1D4ED8;">
+              🔳 QR코드로 연결하기
+            </button>
+            <button type="button" class="header-btn" id="btnCopyDeviceAutoAuthLink" style="height: 38px; padding: 0 12px; font-size: 0.78rem; font-weight: 800; border-color: #93C5FD; color: #1D4ED8; background-color: #EFF6FF;">
+              🔗 연결 링크 복사
+            </button>
+            <button type="button" class="header-btn" id="btnShareDeviceLink" style="display: none; height: 38px; padding: 0 12px; font-size: 0.78rem; font-weight: 800; border-color: #86EFAC; color: #166534; background-color: #F0FDF4;">
+              📤 카톡·문자로 보내기
+            </button>
+          </div>
+          <div id="connectQrPanel" style="display: none; flex-direction: column; align-items: center; gap: 6px; padding: 12px; background: #FFFFFF; border: 1.5px dashed #93C5FD; border-radius: 12px;">
+            <img id="connectQrImg" alt="기기 연결 QR코드" style="width: 210px; height: 210px; max-width: 100%; image-rendering: pixelated; background: #FFFFFF;" />
+            <div style="font-size: 0.78rem; font-weight: 800; color: #1E3A8A; text-align: center;">새 폰 카메라로 스캔 → 열린 화면에서 자동 연결</div>
+            <div style="font-size: 0.7rem; font-weight: 700; color: #B45309; text-align: center;">⚠️ 이 QR에는 매장 인증코드가 들어 있습니다. 매장 직원 외에게 보여주지 마세요.</div>
+          </div>
         </div>
       </div>
     </div>
@@ -1583,7 +1603,8 @@
   <!-- Toast Container -->
   <div class="toast-container" id="toastContainer" aria-live="polite"></div>
 
-  <script src="./printer.js?v=20261029_5"></script>
-  <script src="./app.js?v=20261029_9"></script>
+  <script src="./qrcode.js?v=20261029_10"></script>
+  <script src="./printer.js?v=20261029_10"></script>
+  <script src="./app.js?v=20261029_10"></script>
 </body>
 </html>

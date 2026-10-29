@@ -5950,33 +5950,136 @@
       });
     }
 
+    // ===== 다른 폰/태블릿 간편 연결 (QR · 링크 복사 · 공유) =====
+    function buildDeviceConnectLink() {
+      const keyInput = document.getElementById('licenseKeyInput');
+      const targetKey = String((keyInput && keyInput.value) || state.licenseKey || '').trim().toUpperCase();
+      if (!targetKey || !verifyLicenseKey(targetKey)) return '';
+      const base = window.location.origin && window.location.origin !== 'null'
+        ? `${window.location.origin}${window.location.pathname}`
+        : 'https://dailyplantlabs.github.io/freshlabel1/';
+      let link = `${base}?lkey=${encodeURIComponent(targetKey)}`;
+      const chkInclude = document.getElementById('chkConnectIncludeSheet');
+      if (state.googleSheetWebAppUrl && (!chkInclude || chkInclude.checked)) {
+        link += `&gsync=${encodeURIComponent(state.googleSheetWebAppUrl)}`;
+      }
+      return link;
+    }
+
+    function refreshDeviceConnectBox() {
+      const row = document.getElementById('deviceConnectSyncRow');
+      if (row) row.style.display = state.googleSheetWebAppUrl ? 'flex' : 'none';
+      const shareBtn = document.getElementById('btnShareDeviceLink');
+      if (shareBtn) shareBtn.style.display = navigator.share ? 'inline-flex' : 'none';
+      const panel = document.getElementById('connectQrPanel');
+      if (panel && panel.style.display !== 'none') renderConnectQr();
+    }
+
+    function renderConnectQr() {
+      const panel = document.getElementById('connectQrPanel');
+      const img = document.getElementById('connectQrImg');
+      const fbEl = document.getElementById('licenseActivateFeedback');
+      const link = buildDeviceConnectLink();
+      if (!link) {
+        if (panel) panel.style.display = 'none';
+        if (fbEl) {
+          fbEl.style.color = '#B91C1C';
+          fbEl.textContent = '⚠️ 먼저 유효한 정식판 인증코드를 입력해 주세요.';
+        }
+        return false;
+      }
+      if (typeof qrcode !== 'function') {
+        if (fbEl) {
+          fbEl.style.color = '#B91C1C';
+          fbEl.textContent = '⚠️ QR 생성 모듈을 불러오지 못했습니다. 새로고침 후 다시 시도하거나 [연결 링크 복사]를 사용해 주세요.';
+        }
+        return false;
+      }
+      const qr = qrcode(0, 'M');
+      qr.addData(link);
+      qr.make();
+      if (img) img.src = qr.createDataURL(6, 3);
+      if (panel) panel.style.display = 'flex';
+      return true;
+    }
+
+    const btnShowConnectQr = document.getElementById('btnShowConnectQr');
+    if (btnShowConnectQr) {
+      btnShowConnectQr.addEventListener('click', () => {
+        const panel = document.getElementById('connectQrPanel');
+        if (panel && panel.style.display === 'flex') {
+          panel.style.display = 'none';
+          btnShowConnectQr.textContent = '🔳 QR코드로 연결하기';
+          return;
+        }
+        if (renderConnectQr()) btnShowConnectQr.textContent = '✕ QR코드 닫기';
+      });
+    }
+
+    const chkConnectIncludeSheet = document.getElementById('chkConnectIncludeSheet');
+    if (chkConnectIncludeSheet) {
+      chkConnectIncludeSheet.addEventListener('change', () => {
+        const panel = document.getElementById('connectQrPanel');
+        if (panel && panel.style.display === 'flex') renderConnectQr();
+      });
+    }
+
+    const licenseDialogForConnect = document.getElementById('licenseDialog');
+    if (licenseDialogForConnect) {
+      new MutationObserver(() => {
+        if (licenseDialogForConnect.open) refreshDeviceConnectBox();
+        else {
+          const panel = document.getElementById('connectQrPanel');
+          if (panel) panel.style.display = 'none';
+          const btn = document.getElementById('btnShowConnectQr');
+          if (btn) btn.textContent = '🔳 QR코드로 연결하기';
+        }
+      }).observe(licenseDialogForConnect, { attributes: true, attributeFilter: ['open'] });
+    }
+
     const btnCopyDeviceAutoAuthLink = document.getElementById('btnCopyDeviceAutoAuthLink');
     if (btnCopyDeviceAutoAuthLink) {
       btnCopyDeviceAutoAuthLink.addEventListener('click', () => {
-        const keyInput = document.getElementById('licenseKeyInput');
         const fbEl = document.getElementById('licenseActivateFeedback');
-        const targetKey = String((keyInput && keyInput.value) || state.licenseKey || '').trim().toUpperCase();
-        if (!targetKey || !verifyLicenseKey(targetKey)) {
+        const link = buildDeviceConnectLink();
+        if (!link) {
           if (fbEl) {
             fbEl.style.color = '#B91C1C';
             fbEl.textContent = '⚠️ 먼저 유효한 정식판 인증코드를 입력해 주세요.';
           }
           return;
         }
-        const base = window.location.origin && window.location.origin !== 'null'
-          ? `${window.location.origin}${window.location.pathname}`
-          : 'https://dailyplantlabs.github.io/freshlabel1/';
-        const link = `${base}?lkey=${encodeURIComponent(targetKey)}`;
         if (navigator.clipboard && navigator.clipboard.writeText) {
           navigator.clipboard.writeText(link).catch(() => {});
         }
         if (fbEl) {
           fbEl.style.color = '#2563EB';
-          fbEl.textContent = `📲 다른 기기(태블릿·폰) 자동연결 링크가 복사되었습니다! 카톡으로 보내 클릭하면 즉시 등록됩니다.`;
+          fbEl.textContent = '🔗 연결 링크가 복사되었습니다! 새 폰에서 이 링크를 열면 바로 연결됩니다.';
         }
       });
     }
-  }
+
+    const btnShareDeviceLink = document.getElementById('btnShareDeviceLink');
+    if (btnShareDeviceLink) {
+      btnShareDeviceLink.addEventListener('click', async () => {
+        const fbEl = document.getElementById('licenseActivateFeedback');
+        const link = buildDeviceConnectLink();
+        if (!link) {
+          if (fbEl) {
+            fbEl.style.color = '#B91C1C';
+            fbEl.textContent = '⚠️ 먼저 유효한 정식판 인증코드를 입력해 주세요.';
+          }
+          return;
+        }
+        try {
+          await navigator.share({
+            title: 'FreshLabel 기기 연결',
+            text: '아래 링크를 열면 FreshLabel이 바로 연결됩니다.',
+            url: link
+          });
+        } catch (_) {}
+      });
+    }  }
 
   // Auto-connect if opened with ?gsync=, ?lchk= (검문소 URL), or ?lkey= (자동 정품인증) parameters
   try {
@@ -5995,10 +6098,11 @@
     }
     const lkeyParam = params.get('lkey');
     // 새로고침할 때마다 다시 등록되지 않도록 주소창에서 인증 파라미터 제거
-    if (lkeyParam || lchkParam) {
+    if (lkeyParam || lchkParam || gsyncParam) {
       try {
         params.delete('lkey');
         params.delete('lchk');
+        params.delete('gsync');
         const qs = params.toString();
         window.history.replaceState(null, '', window.location.pathname + (qs ? '?' + qs : '') + window.location.hash);
       } catch (_) {}
