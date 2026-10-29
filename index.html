@@ -7,7 +7,7 @@
   <title>FreshLabel — 미개봉 선입선출 &amp; 소분 라벨 원터치 관리</title>
   <link rel="manifest" href="./manifest.json" />
   <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
-  <link rel="stylesheet" href="./styles.css?v=20261029_8" />
+  <link rel="stylesheet" href="./styles.css?v=20261029_9" />
 </head>
 <body>
   <div class="app-shell" data-app-mode="SIMPLE">
@@ -155,6 +155,9 @@
           <button type="button" class="header-btn" id="btnOpenFavSelectModal" style="height: 38px; border-color: #F59E0B; background-color: #FFFBEB; color: #B45309; font-weight: 800;">
             <span>★ 품목 선택</span>
           </button>
+          <button type="button" class="header-btn btn-edit-order-toggle" id="btnEditOrderSimple" style="height: 38px; font-weight: 800;" title="품목 순서 바꾸기">
+            <span class="edit-order-label">✏️ 편집</span>
+          </button>
         </div>
 
         <div class="simple-kiosk-scroll-body" id="simpleKioskScrollBody">
@@ -282,6 +285,9 @@
           <button type="button" class="header-btn" id="btnOpenFavSelectFromUse" style="height: 38px; border-color: #F59E0B; background-color: #FFFFFF; color: #B45309; font-weight: 800;">
             <span>★ 품목 선택</span>
           </button>
+          <button type="button" class="header-btn btn-edit-order-toggle" id="btnEditOrderUse" style="height: 38px; font-weight: 800;" title="품목 순서 바꾸기">
+            <span class="edit-order-label">✏️ 편집</span>
+          </button>
         </div>
 
         <div class="simple-kiosk-scroll-body" id="useKioskScrollBody">
@@ -351,6 +357,9 @@
               title="비워두면 품목별 기본 기한으로 자동 입고됩니다"
             />
           </div>
+          <button type="button" class="header-btn btn-edit-order-toggle" id="btnEditOrderReceive" style="height: 38px; font-weight: 800;" title="품목 순서 바꾸기">
+            <span class="edit-order-label">✏️ 편집</span>
+          </button>
           <button type="button" class="btn-add-stock" id="btnReceiveScanAutoSave" style="background-color: #0284C7; border-color: #0284C7; height: 38px;">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
@@ -1575,6 +1584,6 @@
   <div class="toast-container" id="toastContainer" aria-live="polite"></div>
 
   <script src="./printer.js?v=20261029_5"></script>
-  <script src="./app.js?v=20261029_8"></script>
+  <script src="./app.js?v=20261029_9"></script>
 </body>
 </html>

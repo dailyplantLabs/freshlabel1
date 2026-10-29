@@ -3933,3 +3933,123 @@ body:has(dialog[open]) {
     width: auto;
   }
 }
+
+/* ==========================================================================
+   편집 모드 (품목 버튼 순서 바꾸기)
+   ========================================================================== */
+.btn-edit-order-toggle {
+  border-color: #94A3B8;
+  background-color: #FFFFFF;
+  color: #334155;
+}
+.btn-edit-order-toggle.active {
+  border-color: #2563EB;
+  background-color: #2563EB;
+  color: #FFFFFF;
+}
+.is-edit-card {
+  position: relative;
+  cursor: grab;
+  outline: 2px dashed #F59E0B;
+  outline-offset: -2px;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.is-edit-card.is-dragging {
+  opacity: 0.45;
+}
+.is-edit-card.is-drag-over {
+  outline: 3px solid #2563EB;
+  background-color: #EFF6FF;
+}
+.is-edit-card .use-one-touch-bar,
+.is-edit-card .simple-kiosk-bottom,
+.is-edit-card .receive-btn-row {
+  visibility: hidden;
+}
+.edit-order-controls {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 52%;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 0 8px;
+  background: rgba(255, 251, 235, 0.96);
+  border-top: 1px dashed #F59E0B;
+  border-radius: 0 0 inherit inherit;
+  z-index: 5;
+}
+.edit-order-btn {
+  flex: 1 1 0;
+  max-width: 72px;
+  height: 38px;
+  border: 1.5px solid #D97706;
+  border-radius: 8px;
+  background: #FFFFFF;
+  color: #B45309;
+  font-size: 1rem;
+  font-weight: 900;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.edit-order-btn:active:not(:disabled) {
+  background: #FDE68A;
+}
+.edit-order-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+.edit-order-num {
+  min-width: 26px;
+  text-align: center;
+  font-size: 0.9rem;
+  font-weight: 900;
+  color: #92400E;
+}
+.edit-order-banner {
+  position: fixed;
+  left: 50%;
+  bottom: 14px;
+  transform: translateX(-50%);
+  z-index: 1200;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  max-width: calc(100vw - 20px);
+  padding: 10px 12px 10px 16px;
+  border-radius: 999px;
+  background: #1E293B;
+  color: #FFFFFF;
+  font-size: 0.8125rem;
+  font-weight: 800;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.35);
+}
+.edit-order-banner button {
+  flex-shrink: 0;
+  height: 32px;
+  padding: 0 14px;
+  border: none;
+  border-radius: 999px;
+  background: #2563EB;
+  color: #FFFFFF;
+  font-family: inherit;
+  font-size: 0.8125rem;
+  font-weight: 900;
+  cursor: pointer;
+}
+@media (max-width: 1260px) {
+  .edit-order-banner {
+    bottom: 76px;
+    border-radius: 14px;
+    width: calc(100vw - 20px);
+    justify-content: space-between;
+  }
+}
+@media print {
+  .edit-order-banner { display: none !important; }
+}

@@ -462,6 +462,13 @@
           : p))
         .filter((p) => !(seededProdIds.has(p.id) && (!p.lots || p.lots.length === 0)));
     }
+    if (Array.isArray(s.unopenedProducts)) {
+      s.unopenedProducts.forEach((p) => {
+        if (Array.isArray(p.lots)) {
+          p.lots = p.lots.filter((l) => !(String(l.id || '').startsWith('lot-auto-') && Number(l.qty) === 8));
+        }
+      });
+    }
     if (Number(s.roiSavedKrw) >= 485000) {
       s.roiSavedKrw = Number(s.roiSavedKrw) - 485000;
     }
@@ -2329,7 +2336,7 @@
           {
             id: `lot-auto-${preset.id}`,
             expiryDate: defaultExpiry,
-            qty: 8
+            qty: 0
           }
         ]
       };
@@ -2820,7 +2827,7 @@
               : `<span class="simple-stock-pill low-stock tabular-nums">0${prod.unit}</span>`;
 
           return `
-            <div class="receive-kiosk-card">
+            <div class="receive-kiosk-card" data-preset-id="${preset.id}">
               <div class="simple-kiosk-top">
                 <div class="simple-kiosk-name">${cleanName}</div>
                 ${stockPillHtml}
@@ -6015,6 +6022,172 @@
     });
   }
 
+  // ==========================================================================
+  // 편집 모드: 품목 버튼 순서 바꾸기 (◀ ▶ 버튼 / 드래그)
+  // ==========================================================================
+  let isEditOrderMode = false;
+  const EDIT_ORDER_GRID_IDS = ['simpleKioskGrid', 'favGiantGrid', 'useKioskGrid', 'useFavGiantGrid', 'receiveKioskGrid'];
+  const EDIT_ORDER_CARD_SELECTOR = '.simple-kiosk-card, .fav-giant-card, .use-kiosk-card, .receive-kiosk-card';
+
+  function getEditGridCards(gridEl) {
+    return Array.from(gridEl.children).filter((c) => c.dataset && c.dataset.presetId);
+  }
+
+  function movePresetOrder(presetId, targetId, position) {
+    if (!presetId || !targetId || presetId === targetId) return false;
+    const arr = state.presets;
+    const from = arr.findIndex((p) => p.id === presetId);
+    if (from < 0) return false;
+    const [moved] = arr.splice(from, 1);
+    const to = arr.findIndex((p) => p.id === targetId);
+    if (to < 0) {
+      arr.splice(from, 0, moved);
+      return false;
+    }
+    arr.splice(position === 'after' ? to + 1 : to, 0, moved);
+    return true;
+  }
+
+  function rerenderKeepingScroll() {
+    const scrollers = Array.from(document.querySelectorAll('.simple-kiosk-scroll-body, .simple-kiosk-panel, .simple-kiosk-grid'));
+    const saved = scrollers.map((el) => el.scrollTop);
+    const winY = window.scrollY;
+    renderAll();
+    scrollers.forEach((el, i) => { el.scrollTop = saved[i]; });
+    window.scrollTo(0, winY);
+  }
+
+  function applyEditOrderDecor() {
+    document.body.classList.toggle('edit-order-mode', isEditOrderMode);
+    document.querySelectorAll('.btn-edit-order-toggle').forEach((btn) => {
+      btn.classList.toggle('active', isEditOrderMode);
+      const lbl = btn.querySelector('.edit-order-label');
+      if (lbl) lbl.textContent = isEditOrderMode ? '✓ 편집 완료' : '✏️ 편집';
+    });
+
+    let banner = document.getElementById('editOrderBanner');
+    if (isEditOrderMode) {
+      if (!banner) {
+        banner = document.createElement('div');
+        banner.id = 'editOrderBanner';
+        banner.className = 'edit-order-banner';
+        banner.innerHTML = '<span>✏️ 편집 중 · ◀ ▶ 버튼이나 드래그로 순서를 바꾸세요</span><button type="button" id="btnEditOrderDone">✓ 완료</button>';
+        document.body.appendChild(banner);
+        banner.querySelector('#btnEditOrderDone').addEventListener('click', () => setEditOrderMode(false));
+      }
+    } else if (banner) {
+      banner.remove();
+    }
+
+    EDIT_ORDER_GRID_IDS.forEach((gridId) => {
+      const gridEl = document.getElementById(gridId);
+      if (!gridEl) return;
+      const cards = getEditGridCards(gridEl);
+      cards.forEach((card, idx) => {
+        const old = card.querySelector(':scope > .edit-order-controls');
+        if (old) old.remove();
+        if (!isEditOrderMode) {
+          card.removeAttribute('draggable');
+          card.classList.remove('is-edit-card');
+          return;
+        }
+        card.setAttribute('draggable', 'true');
+        card.classList.add('is-edit-card');
+        const ctl = document.createElement('div');
+        ctl.className = 'edit-order-controls';
+        ctl.innerHTML = `
+          <button type="button" class="edit-order-btn" data-order-move="prev" aria-label="앞으로" ${idx === 0 ? 'disabled' : ''}>◀</button>
+          <span class="edit-order-num tabular-nums">${idx + 1}</span>
+          <button type="button" class="edit-order-btn" data-order-move="next" aria-label="뒤로" ${idx === cards.length - 1 ? 'disabled' : ''}>▶</button>
+        `;
+        card.appendChild(ctl);
+      });
+    });
+  }
+
+  function setEditOrderMode(on) {
+    isEditOrderMode = Boolean(on);
+    applyEditOrderDecor();
+  }
+
+  // Wrap workspace renderers so edit-mode controls are re-applied after every re-render
+  (function wrapRenderersForEditMode() {
+    const origSimple = renderSimpleModeWorkspace;
+    renderSimpleModeWorkspace = function () { origSimple.apply(this, arguments); applyEditOrderDecor(); };
+    const origUse = renderUseModeWorkspace;
+    renderUseModeWorkspace = function () { origUse.apply(this, arguments); applyEditOrderDecor(); };
+    const origReceive = renderReceiveModeWorkspace;
+    renderReceiveModeWorkspace = function () { origReceive.apply(this, arguments); applyEditOrderDecor(); };
+  })();
+
+  document.querySelectorAll('.btn-edit-order-toggle').forEach((btn) => {
+    btn.addEventListener('click', () => setEditOrderMode(!isEditOrderMode));
+  });
+
+  // Capture phase: in edit mode, card taps must not print / deduct / receive
+  document.addEventListener('click', (e) => {
+    if (!isEditOrderMode) return;
+    const moveBtn = e.target.closest && e.target.closest('[data-order-move]');
+    if (moveBtn) {
+      e.stopPropagation();
+      e.preventDefault();
+      const card = moveBtn.closest('[data-preset-id]');
+      const gridEl = card && card.parentElement;
+      if (!gridEl) return;
+      const cards = getEditGridCards(gridEl);
+      const idx = cards.indexOf(card);
+      const dir = moveBtn.getAttribute('data-order-move');
+      const neighbor = dir === 'prev' ? cards[idx - 1] : cards[idx + 1];
+      if (neighbor && movePresetOrder(card.dataset.presetId, neighbor.dataset.presetId, dir === 'prev' ? 'before' : 'after')) {
+        saveState();
+        rerenderKeepingScroll();
+      }
+      return;
+    }
+    const card = e.target.closest && e.target.closest(EDIT_ORDER_CARD_SELECTOR);
+    if (card && card.parentElement && EDIT_ORDER_GRID_IDS.includes(card.parentElement.id)) {
+      e.stopPropagation();
+      e.preventDefault();
+    }
+  }, true);
+
+  let editDragPresetId = null;
+  document.addEventListener('dragstart', (e) => {
+    if (!isEditOrderMode) return;
+    const card = e.target.closest && e.target.closest('.is-edit-card');
+    if (!card) return;
+    editDragPresetId = card.dataset.presetId;
+    card.classList.add('is-dragging');
+    if (e.dataTransfer) {
+      e.dataTransfer.effectAllowed = 'move';
+      try { e.dataTransfer.setData('text/plain', editDragPresetId); } catch (_) {}
+    }
+  });
+  document.addEventListener('dragover', (e) => {
+    if (!isEditOrderMode || !editDragPresetId) return;
+    const card = e.target.closest && e.target.closest('.is-edit-card');
+    if (!card) return;
+    e.preventDefault();
+    document.querySelectorAll('.is-drag-over').forEach((el) => el.classList.remove('is-drag-over'));
+    if (card.dataset.presetId !== editDragPresetId) card.classList.add('is-drag-over');
+  });
+  document.addEventListener('drop', (e) => {
+    if (!isEditOrderMode || !editDragPresetId) return;
+    const card = e.target.closest && e.target.closest('.is-edit-card');
+    if (!card) return;
+    e.preventDefault();
+    const rect = card.getBoundingClientRect();
+    const before = e.clientX < rect.left + rect.width / 2;
+    if (movePresetOrder(editDragPresetId, card.dataset.presetId, before ? 'before' : 'after')) {
+      saveState();
+      rerenderKeepingScroll();
+    }
+    editDragPresetId = null;
+  });
+  document.addEventListener('dragend', () => {
+    editDragPresetId = null;
+    document.querySelectorAll('.is-dragging, .is-drag-over').forEach((el) => el.classList.remove('is-dragging', 'is-drag-over'));
+  });
   renderAll();
   renderCurrentSticker();
   attachEvents();
